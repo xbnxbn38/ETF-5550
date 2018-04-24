@@ -1,0 +1,80 @@
+# Probabilistic forecasts for the ASX 200 index
+
+The ASX 200 is an index on the Australian Securities Exchange officially released on 31st March 2000. It uses market-weighted average calculations based on the 200 largest listed stocks in Australia. These stocks currently account for the Australian stock market value of 82%. It is considered to be the most important index to measure the operation of the Australian stock market.
+
+We use the daily data over 10 years period until the beginning of 2018 to fit the models. In order to use financial data more efficiently for probabilistic forecasting, and for subsequent evaluation of result by scoring rules, we have processed the data and obtained a simple return for ASX 200 daily price. About the models, we choose to use ARIMA model and ARIMA-GARCH model to fit model. Since the simple return time series can be stationary, some models are not suitable to use as ETS model. Also, using these two models can be very intuitively and clearly to compare the results of forecasting and scoring.
+
+In order to choose the appropriate model, we use auto.arima code from forecast package to automatically search for suitable ARIMA model, and setting the data before 2017 as train data, the data for 2017 as test data. Then the MA(3) model was selected. Then use the already found MA(3) model to select the Garch model.
+
+
+```{r arima, include=FALSE}
+raw.asx <- read_csv("data/s&p asx 200.csv")
+asx <- as.ts(raw.asx[, 6])
+dfasx <- diff(asx)
+
+dftrain <- window(dfasx, end = 2800)
+dftest <- window(dfasx, start = 2801)
+
+# arima
+dffit.arima <- auto.arima(dftrain)
+dffc.arima <- forecast(dffit.arima, h = length(dftest))
+dffcmean.arima <- as.numeric(dffc.arima$mean)
+dffcsd.arima <- as.numeric((dffc.arima$upper[, 2] - dffc.arima$lower[, 2]) / 2 / 1.96)
+
+dfcrps <- crps(as.numeric(dftest), family = "normal", mean = dffcmean.arima, sd = dffcsd.arima) %>% mean() %>% round(digits = 5)
+dflogs <- logs_norm(as.numeric(dftest), mean = dffcmean.arima, sd = dffcsd.arima) %>% mean() %>% round(digits = 5)
+dfdss <- dss_norm(as.numeric(dftest), mean = dffcmean.arima, sd = dffcsd.arima) %>% mean() %>% round(digits = 5)
+
+ARIMA <- c(dfcrps, dflogs, dfdss)
+```
+
+
+```{r garch, include=FALSE, dependson="arima"}
+garch11_results <- garchFit(~ arma(0, 3) + garch(1, 1), data = dftrain, trace = FALSE)
+garch12_results <- garchFit(~ arma(0, 3) + garch(1, 2), data = dftrain, trace = FALSE)
+garch21_results <- garchFit(~ arma(0, 3) + garch(2, 1), data = dftrain, trace = FALSE)
+garch22_results <- garchFit(~ arma(0, 3) + garch(2, 2), data = dftrain, trace = FALSE)
+garch1_results <- garchFit(~ arma(0, 3) + garch(1, 0), data = dftrain, trace = FALSE)
+garch2_results <- garchFit(~ arma(0, 3) + garch(2, 0), data = dftrain, trace = FALSE)
+
+garch11_results@fit$ics -> garch11
+garch12_results@fit$ics -> garch12
+garch21_results@fit$ics -> garch21
+garch22_results@fit$ics -> garch22
+garch1_results@fit$ics -> arch1
+garch2_results@fit$ics -> arch2
+
+garch <- rbind(garch11, garch12, garch21, garch22, arch1, arch2)
+```
+
+```{r table1,message=FALSE, dependson="garch"}
+knitr::kable(round(garch, 3), caption = "Garch model select", booktabs = TRUE)
+```
+
+After comparing the AIC of each Garch model, the AIC of the MA(3)-Garch(1,1) is 10.60842, it is the smaller than other models. So, we consider using it to fit data. Then use these two models to predict the result at the year of 2017, and then evaluate the results of the two models by scoring rules. The results are displayed in the following table.
+
+```{r garchfit, include=FALSE, dependson="arima"}
+# garch
+garch_results <- garchFit(~ arma(0, 3) + garch(1, 1), data = dftrain, trace = FALSE)
+garch_results
+fc.garch <- predict(garch_results, n.ahead = length(dftest), crit_val = 0.95)
+
+fcmean.garch <- as.numeric(fc.garch$meanForecast)
+fcsd.garch <- as.numeric(fc.garch$standardDeviation)
+
+crps <- crps(as.numeric(dftest), family = "normal", mean = fcmean.garch, sd = fcsd.garch) %>% mean() %>% round(digits = 5)
+logs <- logs_norm(as.numeric(dftest), mean = fcmean.garch, sd = fcsd.garch) %>% mean() %>% round(digits = 5)
+dss <- dss_norm(as.numeric(dftest), mean = fcmean.garch, sd = fcsd.garch) %>% mean() %>% round(digits = 5)
+
+GARCH <- c(crps, logs, dss)
+```
+
+```{r table2,message=FALSE, dependson="garchfit"}
+ASX <- round(rbind(GARCH, ARIMA),2)
+colnames(ASX) <- c("CRPS","LogS","DSS")
+rownames(ASX) <- c("GARCH","ARIMA")
+  knitr::kable(ASX, caption = "Scoring Rules for MA model and GARCH model", booktabs = TRUE)
+```
+
+According to the table above, the results of three type scoring rules of MA(3)-garch(1,1) model are all smaller than the result of MA(3) Model. Therefore, it can be shown here that the garch model has a better prediction performance compared to MA(3).
+

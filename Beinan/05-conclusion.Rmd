@@ -1,0 +1,3 @@
+# Conclusion
+
+In this report, we introduced what is the probabilistic forecasts, and calibration and sharpness. It also introduced scoring rules. For the three commonly used scoring rules, we show their original formulas and form under Gaussian predictive distribution. In the section of the case study, we first used two models to do probabilistic forecasts for the ASX200 index, to evaluate the forecasts results by using scoring rules. Then we learned how to use scoring rules to evaluate the outcome of forecasts. In the second case study, we used the M3 datasets and used multiple models to do probabilistic forecasts. We learned how the scoring rules evaluated both the probabilities and the results of car calibration and sharpness.
