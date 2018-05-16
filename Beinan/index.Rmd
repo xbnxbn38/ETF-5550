@@ -6,7 +6,6 @@ studentid: 26401746
 output: bookdown::pdf_book
 header-includes:
         - \usepackage{setspace}\doublespacing
-        - \usepackage{placeins}
         - \usepackage{chngcntr}
         - \usepackage{url}
         - \counterwithin{figure}{section}
@@ -52,9 +51,21 @@ calc_scores <- function(x, scorefn)
   scores <- scorefn(y=x[,"actual"], mean=x[,"mean"], sd=x[,"sd"])
   return(mean(scores))
 }
+
+# Because the interval scoring rule function will be used in calc_scores, I think the the result form of forecast by using PIS is similar with the result form by using the code of crps from R package scoringRules, it means we should not take mean in the code of PIS
+
+#PIS<-function(y,l,u,a)
+#{
+#  mean((u-l)+2/a*pmax(0,y-u)+2/a*pmax(0,l-y))
+#}
+PIS<-function(y,l,u,a)
+{
+  (u-l)+2/a*pmax(0,y-u)+2/a*pmax(0,l-y)
+}
+
 ```
 
 
 # Abstract {-}
 
-This report is about introducing scoring rules and using it to evaluate the results of probabilistic forecasts. In the past few decades, probabilistic forecasts have a very important development and are attracting more and more attention. More and more organizations and individuals begin to use probability prediction instead of point prediction to carry out the future. However, the traditional evaluation methods of point prediction cannot effectively evaluate the results of probabilistic prediction. Because if we want to evaluate the probability prediction effectively, we should not only evaluate the sharpness of the prediction distribution but also evaluate its calibration. For evaluating the result of probabilistic forecasts, scoring rules is a very effective method. It can evaluate the sharpness of the prediction of distribution while assessing calibration. In this article, we have used different scoring rules to evaluate the different forecasting result base on different models at the index of ASX 200 and M3 datasets.
+This thesis is about introducing scoring rules and using it to evaluate interval forecasts and probabilistic forecasts. In the past few decades, the interval forecasts and probabilistic forecasts have a very important development and are attracting more and more attention. More and more organizations and individuals begin to use probability prediction instead of point prediction to carry out the future. However, the traditional evaluation methods of point prediction cannot effectively evaluate the results of probabilistic prediction. Because if we want to evaluate the probability prediction effectively, we should not only evaluate the sharpness of the prediction distribution but also evaluate its calibration. For evaluating the result of interval forecasts and probabilistic forecasts, scoring rules is a very effective method. It can evaluate the sharpness of the prediction of distribution while assessing calibration. In this article, we have used different scoring rules to evaluate the different forecasting result base on different models at the index of ASX 200 and M3 datasets.
