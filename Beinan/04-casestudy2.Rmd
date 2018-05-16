@@ -1,11 +1,15 @@
 # Case study two: M3 data sets
 
-The M3 dataset includes 3003 different type time series, it is from R packages "Mcomp" (@RH182), it can provide more information for evaluating probabilistic forecast by using scoring rule. Different from previous financial data, M3 datasets can use different models for predictive analysis at the same time. In this part, three prediction models are chosen, ARIMA model, ETS model, and Random walk model.
+The M3 dataset includes 3003 different type time series, it is from R packages "Mcomp" (@RH182), it can provide more information for evaluating probabilistic forecast by using scoring rule. Different from previous financial data, M3 datasets can use different models for predictive analysis at the same time. In this part, three prediction models are chosen, ARIMA model, ETS model, and Random walk model (the code from @RH181) .
 
-As in the previous chapter, before we start forecasting and evaluating, the suitable models should be selected. However, for the M3 datasets, there are more than 3000 different time series, so we have modeled all the time series separately by these three models. Meanwhile, because these different time series come from different fields, their the units of test set are all different. Therefore, Before the final evaluation process, the units of each different time series should be unified, which can reduce unnecessary errors when comparing the results of the final evaluation.
+As in the previous chapter, before we start forecasting and evaluating, the suitable models should be selected. However, for the M3 datasets, there are more than 3000 different time series, so we have modeled all the time series separately by these three models. 
+
+Because these different time series come from different fields, their units are all different. Therefore, before the final evaluation process, the units of each different time series should be unified, which can reduce unnecessary errors when comparing the results of the final evaluation. In order to solve this problem, we standardized the results of each grading. The solution is, using the scores of each forecasts result from different models by using different scoring rules to divide the scores from the average method (@RH181) by using same scoring rules, then the standardized results is obtain, and the impact of the unit on the final comparison can be removed.
+
 
 ## Interval forcast for the M3 competition data
 
+Like the case study one, we first make interval forecasts for every times series from M3 datasets by using three different model, ARIMA model, ETS model and random worlk model. Meanwhile, in order to eliminating the impact of units from each time series, the interval forecasts by using average method are also produced. 
 ```{r M3PIS,include=FALSE}
 
 store_ifc_results <- function(u, method)
@@ -98,25 +102,32 @@ etsfc <- map(M3[k], store_fc_results,
 arimafc <- map(M3[k], store_fc_results,
                method=function(x, h, level){forecast(auto.arima(x), h=h, level=level)})
 
+#Eliminating the impact of data units in the model
+
+meanfc2<-map(M3[k], store_fc_results, method=meanf)
+mean_crps<-map_dbl(meanfc2, calc_scores, scorefn=crps_norm)
+mean_logs<-map_dbl(meanfc2, calc_scores, scorefn=logs_norm)
+mean_dss<-map_dbl(meanfc2, calc_scores, scorefn=dss_norm)
+
 #crps
 crps_scores <- mutate(M3_scores,
-                      RWF = map_dbl(rwfc, calc_scores, scorefn=crps_norm),
-                      ETS = map_dbl(etsfc, calc_scores, scorefn=crps_norm),
-                      ARIMA = map_dbl(arimafc, calc_scores, scorefn=crps_norm)
+                      RWF = map_dbl(rwfc, calc_scores, scorefn=crps_norm)/mean_crps,
+                      ETS = map_dbl(etsfc, calc_scores, scorefn=crps_norm)/mean_crps,
+                      ARIMA = map_dbl(arimafc, calc_scores, scorefn=crps_norm)/mean_crps
 ) %>%
   gather(-id, -type, -period, value=CRPS, key=model)
 #logs
 log_scores <- mutate(M3_scores,
-                     RWF = map_dbl(rwfc, calc_scores, scorefn=logs_norm),
-                     ETS = map_dbl(etsfc, calc_scores, scorefn=logs_norm),
-                     ARIMA = map_dbl(arimafc, calc_scores, scorefn=logs_norm)
+                     RWF = map_dbl(rwfc, calc_scores, scorefn=logs_norm)/mean_logs,
+                     ETS = map_dbl(etsfc, calc_scores, scorefn=logs_norm)/mean_logs,
+                     ARIMA = map_dbl(arimafc, calc_scores, scorefn=logs_norm)/mean_logs
 ) %>%
   gather(-id, -type, -period, value=LOGS, key=model)
 #dss
 dss_scores<-mutate(M3_scores,
-                   RWF = map_dbl(rwfc, calc_scores, scorefn=dss_norm),
-                   ETS = map_dbl(etsfc, calc_scores, scorefn=dss_norm),
-                   ARIMA = map_dbl(arimafc, calc_scores, scorefn=dss_norm)
+                   RWF = map_dbl(rwfc, calc_scores, scorefn=dss_norm)/mean_dss,
+                   ETS = map_dbl(etsfc, calc_scores, scorefn=dss_norm)/mean_dss,
+                   ARIMA = map_dbl(arimafc, calc_scores, scorefn=dss_norm)/mean_dss
 ) %>%
   gather(-id, -type, -period, value=DSS, key=model)
 

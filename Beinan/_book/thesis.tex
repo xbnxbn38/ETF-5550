@@ -416,7 +416,14 @@ comparison.
 By comparing these two curves, their overall characteristics are
 extremely similar. Their scores are not very different at smaller
 confidence intervals, but in the larger confidence interval, the scores
-are slightly different by using these two different models.
+are slightly different by using these two different models. The interval
+scores of interval forecasts by using GRACH model is becoming smaller
+than that by using ARIMA model as the confident interval expands. So, at
+high confident interval level, interval forecasts by using GARCH model
+has a relatively good performance. This result illustrates, for the
+interval forecast of financial return time series, GARCH model can
+provide more efficient result to forecasters. And it is also proving
+that it is more suitable for fitting financial data.
 
 \section{Probabilistic forecasts for the ASX 200
 index}\label{probabilistic-forecasts-for-the-asx-200-index}
@@ -458,20 +465,33 @@ packages ``Mcomp'' (\textcite{RH182}), it can provide more information
 for evaluating probabilistic forecast by using scoring rule. Different
 from previous financial data, M3 datasets can use different models for
 predictive analysis at the same time. In this part, three prediction
-models are chosen, ARIMA model, ETS model, and Random walk model.
+models are chosen, ARIMA model, ETS model, and Random walk model (the
+code from \textcite{RH181}) .
 
 As in the previous chapter, before we start forecasting and evaluating,
 the suitable models should be selected. However, for the M3 datasets,
 there are more than 3000 different time series, so we have modeled all
-the time series separately by these three models. Meanwhile, because
-these different time series come from different fields, their the units
-of test set are all different. Therefore, Before the final evaluation
-process, the units of each different time series should be unified,
-which can reduce unnecessary errors when comparing the results of the
-final evaluation.
+the time series separately by these three models.
+
+Because these different time series come from different fields, their
+units are all different. Therefore, before the final evaluation process,
+the units of each different time series should be unified, which can
+reduce unnecessary errors when comparing the results of the final
+evaluation. In order to solve this problem, we standardized the results
+of each grading. The solution is, using the scores of each forecasts
+result from different models by using different scoring rules to divide
+the scores from the average method (\textcite{RH181}) by using same
+scoring rules, then the standardized results is obtain, and the impact
+of the unit on the final comparison can be removed.
 
 \section{Interval forcast for the M3 competition
 data}\label{interval-forcast-for-the-m3-competition-data}
+
+Like the case study one, we first make interval forecasts for every
+times series from M3 datasets by using three different model, ARIMA
+model, ETS model and random worlk model. Meanwhile, in order to
+eliminating the impact of units from each time series, the interval
+forecasts by using average method are also produced.
 
 \includegraphics[width=1\linewidth]{thesis_files/figure-latex/boxplotPIS-1}
 
