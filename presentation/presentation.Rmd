@@ -1,0 +1,370 @@
+---
+title: |
+ | \fontsize{18}{15}\sf\bfseries{What makes a good prediction interval or probabilistic forecast?}
+ 
+author: 
+- Professor Rob Hydnman
+- Beinan Xu
+date: "`r format(Sys.time(), '%d %B %Y')`"
+fontsize: 14pt
+output:
+  beamer_presentation:
+    fig_height: 5
+    fig_width: 8
+    highlight: tango
+    theme: metropolis
+header-includes:
+  - \usepackage{MonashBlue}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE, cache=TRUE, dev.args=list(bg=grey(0.9), pointsize=11))
+library(forecast)
+library(tidyverse)
+library(forcats)
+library(scoringRules)
+library(lubridate)
+library(fGarch)
+library(Mcomp)
+
+
+store_fc_results <- function(u, method)
+{
+  fc <- u[["x"]] %>% method(h=u[["h"]],level=95)
+  fcsd <- c(fc$upper-fc$lower)/2/qnorm(0.975)
+  return(cbind(actual=u[["xx"]], mean=c(fc$mean),sd=fcsd))
+}
+
+calc_scores <- function(x, scorefn)
+{
+  scores <- scorefn(y=x[,"actual"], mean=x[,"mean"], sd=x[,"sd"])
+  return(mean(scores))
+}
+
+PIS<-function(y,l,u,a)
+{
+  (u-l)+2/a*pmax(0,y-u)+2/a*pmax(0,l-y)
+}
+
+```
+
+# Introduction
+
+# Scoring Rules
+
+# Interval forecast
+
+# Probabilistic forecast
+
+# case study one: ASX200
+
+# Evaluating by interval forecast 
+
+## plot for ARIMA model
+```{r asxdata, include=FALSE}
+raw.asx <- read_csv("data/s&p asx 200.csv")
+asx <- as.ts(raw.asx[, 6])
+dfasx <- diff(asx)
+
+dftrain <- window(dfasx, end = 2800)
+dftest <- window(dfasx, start = 2801)
+dffit.arima <- auto.arima(dftrain,stepwise = F)
+```
+```{r garch, include=FALSE, dependson="arima"}
+garch11_results <- garchFit(~ arma(0, 3) + garch(1, 1), data = dftrain, trace = FALSE)
+garch12_results <- garchFit(~ arma(0, 3) + garch(1, 2), data = dftrain, trace = FALSE)
+garch21_results <- garchFit(~ arma(0, 3) + garch(2, 1), data = dftrain, trace = FALSE)
+garch22_results <- garchFit(~ arma(0, 3) + garch(2, 2), data = dftrain, trace = FALSE)
+garch1_results <- garchFit(~ arma(0, 3) + garch(1, 0), data = dftrain, trace = FALSE)
+garch2_results <- garchFit(~ arma(0, 3) + garch(2, 0), data = dftrain, trace = FALSE)
+
+garch11_results@fit$ics -> garch11
+garch12_results@fit$ics -> garch12
+garch21_results@fit$ics -> garch21
+garch22_results@fit$ics -> garch22
+garch1_results@fit$ics -> arch1
+garch2_results@fit$ics -> arch2
+
+garch <- rbind(garch11, garch12, garch21, garch22, arch1, arch2)
+```
+```{r r Infasx, include=FALSE}
+## arima 
+
+dffc.arima <- forecast(dffit.arima, h = length(dftest), level=c(1,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,99))
+dffc.arima 
+
+#loop
+c=1:21
+
+b=(100-dffc.arima$level)/100
+w<-cbind(c,b)%>% as.matrix()
+
+ASX_PIS.arima<-matrix(0,nrow=21,ncol=1)
+for (b in 1:21){
+  ASX_PIS.arima[b]<-PIS(as.numeric(dftest),l=(dffc.arima$lower[, w[b,1]]),u=(dffc.arima$upper[, w[b,1]]),a=w[b,2])%>% mean()
+}
+
+colnames(ASX_PIS.arima)="Interval scores" 
+rownames(ASX_PIS.arima)<-dffc.arima$level
+```
+
+```{R plot1, message=FALSE}
+data.frame(level=dffc.arima$level, PIS=ASX_PIS.arima[,1]) %>%
+  ggplot(aes(x=level, y=PIS)) +
+  geom_point() + geom_line()+
+  ggtitle("Interval scores for ARIMA model at different confident level")
+```
+```{R garchPIS, include=FALSE}
+## garch
+garch_results <- garchFit(~ arma(0, 3) + garch(1, 1), data = dftrain, trace = FALSE)
+
+ASX_PIS.garch<-matrix(0,nrow=21,ncol=1)
+for(b in 1:21){
+  fc.garch <- predict(garch_results, n.ahead = length(dftest), crit_val = 1-w[b,2])
+  fcmean.garch<- as.numeric(fc.garch$meanForecast)
+  fcsd.garch<- as.numeric(fc.garch$standardDeviation)
+  upper.garch=fcmean.garch+fcsd.garch*qnorm(1-w[b,2]/2)
+  lower.garch=fcmean.garch-fcsd.garch*qnorm(1-w[b,2]/2)
+  ASX_PIS.garch[b]<-PIS(as.numeric(dftest),l=lower.garch,u=upper.garch,a=w[b,2])%>%mean()
+}
+
+colnames(ASX_PIS.garch)="Interval scores" 
+rownames(ASX_PIS.garch)<-dffc.arima$level
+
+```
+
+
+
+# Evaluating by interval forecast 
+##plot for GARCH model
+```{R plot2, message=FALSE}
+data.frame(level=dffc.arima$level, PIS=ASX_PIS.garch[,1]) %>%
+  ggplot(aes(x=level, y=PIS)) +
+  geom_point() + geom_line() +
+  ggtitle("Interval scores for Garch model at different confident level")
+```
+
+
+
+# Evaluating by interval forecast 
+## comparing two models
+```{r plot3,message=FALSE}
+data.frame(ARIMA=ASX_PIS.arima[,1],
+           GARCH=ASX_PIS.garch[,1],level=dffc.arima$level)%>%
+  ggplot(aes(x=level,y=PIS))+
+  geom_line(aes(y = ARIMA,colour="ARIMA"))+
+  geom_line(aes(y = GARCH,colour="GARCH"))+
+  ggtitle("Comparing the interval scores of the two models at different level")
+
+ 
+```
+
+
+
+# case study two: M3 data set
+
+# Evaluating by interval forecast
+# Plot 
+```{r M3PIS,include=FALSE}
+
+store_ifc_results <- function(u, method)
+{
+  fc <- u[["x"]] %>% method(h=u[["h"]],level=95)
+  return(cbind(actual=u[["xx"]], lower=c(fc$lower),upper=c(fc$upper)))
+}
+
+calc_PIS <- function(x, scorefn)
+{
+  scores <- scorefn(y=x[,"actual"], l=x[,"lower"], u=x[,"upper"],a=0.05)
+  return(mean(scores))
+}
+
+q <- seq(3003)
+
+M3_PIS <- map(M3[q], function(x) {
+  c(x[["sn"]], x[["type"]], x[["period"]])
+}) %>%
+  do.call(what=rbind.data.frame) %>%
+  as_tibble()
+colnames(M3_PIS) <- c("id","type","period")
+
+rwifc <- map(M3[q], store_ifc_results, method=rwf)
+
+etsifc <- map(M3[q], store_ifc_results,
+             method=function(x, h, level){forecast(ets(x), h=h, level=level)})
+
+arimaifc <- map(M3[q], store_ifc_results,
+               method=function(x, h, level){forecast(auto.arima(x), h=h, level=level)})
+
+#Eliminating the impact of data units in the model, I create new PIS by mean forecast
+
+meanfc<-map(M3[q], store_ifc_results, method=meanf)
+mean_PIS<-map_dbl(meanfc, calc_PIS, scorefn=PIS)
+
+PIS_scores <- mutate(M3_PIS,
+                      RWF = map_dbl(rwifc, calc_PIS, scorefn=PIS)/mean_PIS,
+                      ETS = map_dbl(etsifc, calc_PIS, scorefn=PIS)/mean_PIS,
+                      ARIMA = map_dbl(arimaifc, calc_PIS, scorefn=PIS)/mean_PIS
+) %>%
+  gather(-id, -type, -period, value=PIS, key=model)
+
+PIS_scores
+M3ilong<-gather(PIS_scores, -id, -type, -period, -model, key=ScoringMethod, value=Score)
+```
+
+```{r boxplotPIS,message=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="M3"}
+# Produce some boxplots
+M3ilong %>%
+  mutate(
+    period = fct_collapse(period, YEARLY = c("OTHER","YEARLY")),
+    period = fct_relevel(period, "YEARLY","QUARTERLY","MONTHLY")
+  ) %>%
+  ggplot() +
+    geom_boxplot(aes(x=model, y=Score, fill=ScoringMethod)) +
+    facet_grid(ScoringMethod ~ period, scales="free") +
+    guides(fill=FALSE) +
+    xlab("Forecasting method") +
+    ggtitle("Scores for the M3 data") -> I
+I
+```
+
+# plot for log
+```{r boxplotlogPIS,message=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="boxplot"}
+# Produce some boxplots on log scale
+I + scale_y_log10()
+```
+
+# Evaluating by probilistic forecasts
+#plot
+```{r M3,include=FALSE}
+# Work on subset of data?
+#k <- sample(3003, size=100)
+k <- seq(3003)
+
+M3_scores <- map(M3[k], function(x) {
+  c(x[["sn"]], x[["type"]], x[["period"]])
+}) %>%
+  do.call(what=rbind.data.frame) %>%
+  as_tibble()
+colnames(M3_scores) <- c("id","type","period")
+
+rwfc <- map(M3[k], store_fc_results, method=rwf)
+
+etsfc <- map(M3[k], store_fc_results,
+             method=function(x, h, level){forecast(ets(x), h=h, level=level)})
+
+arimafc <- map(M3[k], store_fc_results,
+               method=function(x, h, level){forecast(auto.arima(x), h=h, level=level)})
+
+#Eliminating the impact of data units in the model
+
+meanfc2<-map(M3[k], store_fc_results, method=meanf)
+mean_crps<-map_dbl(meanfc2, calc_scores, scorefn=crps_norm)
+mean_logs<-map_dbl(meanfc2, calc_scores, scorefn=logs_norm)
+mean_dss<-map_dbl(meanfc2, calc_scores, scorefn=dss_norm)
+
+#crps
+crps_scores <- mutate(M3_scores,
+                      RWF = map_dbl(rwfc, calc_scores, scorefn=crps_norm)/mean_crps,
+                      ETS = map_dbl(etsfc, calc_scores, scorefn=crps_norm)/mean_crps,
+                      ARIMA = map_dbl(arimafc, calc_scores, scorefn=crps_norm)/mean_crps
+) %>%
+  gather(-id, -type, -period, value=CRPS, key=model)
+#logs
+log_scores <- mutate(M3_scores,
+                     RWF = map_dbl(rwfc, calc_scores, scorefn=logs_norm)/mean_logs,
+                     ETS = map_dbl(etsfc, calc_scores, scorefn=logs_norm)/mean_logs,
+                     ARIMA = map_dbl(arimafc, calc_scores, scorefn=logs_norm)/mean_logs
+) %>%
+  gather(-id, -type, -period, value=LOGS, key=model)
+#dss
+dss_scores<-mutate(M3_scores,
+                   RWF = map_dbl(rwfc, calc_scores, scorefn=dss_norm)/mean_dss,
+                   ETS = map_dbl(etsfc, calc_scores, scorefn=dss_norm)/mean_dss,
+                   ARIMA = map_dbl(arimafc, calc_scores, scorefn=dss_norm)/mean_dss
+) %>%
+  gather(-id, -type, -period, value=DSS, key=model)
+
+
+M3_scores1 <- left_join(crps_scores,log_scores)
+#M3_scores2<- left_join(dss_scores,lin_scores)
+M3_scores<-left_join(M3_scores1,dss_scores)
+
+
+
+# Now make it long form
+M3long <- gather(M3_scores, -id, -type, -period, -model, key=ScoringMethod, value=Score)
+
+```
+
+```{r boxplot,message=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="M3"}
+# Produce some boxplots
+M3long %>%
+  mutate(
+    period = fct_collapse(period, YEARLY = c("OTHER","YEARLY")),
+    period = fct_relevel(period, "YEARLY","QUARTERLY","MONTHLY")
+  ) %>%
+  ggplot() +
+    geom_boxplot(aes(x=model, y=Score, fill=ScoringMethod)) +
+    facet_grid(ScoringMethod ~ period, scales="free") +
+    guides(fill=FALSE) +
+    xlab("Forecasting method") +
+    ggtitle("Scores for the M3 data") -> p
+p
+```
+
+#plot for log
+
+```{r boxplotlog,message=FALSE,fig.height=10,fig.width=10, dependson="boxplot"}
+# Produce some boxplots on log scale
+p + scale_y_log10()
+```
+
+# conclusion
+
+
+#  Q & A
+  
+  \Large
+  
+  **Question and Answer**
+  
+  
+  
+
+# Reference
+
+  \scriptsize
+  
+  * Almutaz, Ibrahim ; Ajbar, Abdelhamid ; Khalid, Yasir ; Ali, Emad Desalination, A probabilistic forecast of water demand for a tourist and desalination dependent city: Case of Mecca, Saudi Arabia, 2012*Peer Reviewed Journal* Vol.294, pp.53-59 
+  
+  * Edgar C. Merkle, Mark Steyvers (2013) Choosing a Strictly Proper Scoring Rule. *Decision Analysis* 10(4):292-304. 
+  
+  * Gneiting T, Balabdaoui F, Raftery AE. 2007. Probabilistic forecasts, calibration and sharpness. *J. R. Stat. Soc. B* 67:243–68
+  
+  * Gneiting, T., & Katzfuss, M. (2014). Probabilistic forecasting. *Annual Review of Statistics and Its Application*, 1(1), 125–151.
+  
+  * Gneiting T, Raftery AE. 2007. Strictly proper scoring rules, prediction, and estimation. *J. Am. Stat. Assoc.* 102:359–78
+  
+  * Hersbach, H. (2000), “Decomposition of the Continuous Ranked Probability Score for Ensemble Prediction Systems,” *Weather and Forecasting*, 15,559–570.
+  
+  * Hyndman, R. J. (2018). forecast: Forecasting functions for time series and linear models (R package version 8.3). https://CRAN.R-project.org/package=forecast
+  
+  * Hyndman, R. J., & Athanasopoulos, G. (2018). Forecasting: principles and practice. 2nd ed., Melbourne, Australia: OTexts. https://OTexts.org/fpp2/
+  
+ 
+  
+  
+# Reference
+
+  \scriptsize 
+  
+   * Lowe, Rachel ; Coelho, Caio As ; Barcellos, Christovam ; Carvalho, Marilia Sá ; Catão, Rafael De Castro ; Coelho, Giovanini E ; Ramalho, Walter Massa ; Bailey, Trevor C ; Stephenson, David B ; Rodó, Xavier eLife, 2016, *Peer Reviewed Journal* Vol.5 
+  
+  * Matheson, J. E., and Winkler, R. L. (1976), “Scoring Rules for Continuous Probability Distributions,” *Management Science*, 22, 1087–1096.
+  
+  * Raftery, A. E. (2016). Use and communication of probabilistic forecasts. *Statistical Analysis and Data Mining: The ASA Data Science Journal*, 9(6), 397–410.
+  
+  * Roulston, M. S., and Smith, L. A. (2002), “Evaluating Probabilistic Forecasts Using Information Theory,” *Monthly Weather Review*, 130, 1653–1660.
+
+
