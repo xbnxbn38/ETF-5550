@@ -1,0 +1,92 @@
+# Assessing probabilistic forecasts using scoring rules
+
+The traditional prediction method is mainly based on point forecasts, which can provide forecasters with future development trend information under given significant level. But the future is extremely uncertain. It's hard to predict an accurate future through the past information. For example, when watching a football match, if the level of the two teams is very different, we can easily judge that the team is more likely to win, but how many goals is hard to know. At this point, the limitations of point forecasts are reflected. But the probabilistic forecasts can be given a probability distribution for all possible future results so that more information can be obtained to predict the uncertain future. If we can assign a different probability to different results in the game, the fans will be able to judge the result of the match.
+
+There are two important factors to evaluate the results of probabilistic forecasts: calibration and sharpness. The meaning of sharpness refers to the centralization of the predicted distribution and the calibration refers to the statistical consistency between the predicted distribution and the observed value. (@GBR07) They affect the quality of probabilistic forecast. Therefore, to evaluate the calibration and sharpness of probability prediction is an important means to evaluate probability prediction results.
+
+## Different between confident interval and prediction interval
+
+Before discussing scoring rules, we must first understand the difference between confidence interval and prediction interval. These two kinds of intervals are often considered to be the same, but this view is wrong, so they need to be very careful when used. For their differences, @RH13 gave a detailed introduction on his blog. The prediction interval is an interval related to the random variable, and all of the random variable are located in the interval. In contrast, confidence interval is a concept of frequency, which is related to parameters. The prediction interval is used in the interval forecasts and probabilistic forecasts.
+
+## Property of scoring rules
+
+Assume the result of probabilistic forecasts is $F$, $F \in \cal{F}$ where $\cal{F}$ is a suitable class of CDFs, and $G:\cal{F\times\cdot\cdot\cdot\times F\to F}$ . Then the scoring rule will be $S(F,y)$, where $y \in R$ is the realized outcome.
+
+The scoring rule $S$ is proper relative to the class $\cal{F}$ if $$S(F,G)\geq S(G,G)$$ for all $F,G \in \cal{F}$. Also when $F=G$, the two sides of equation are equal, then it meanings the scoring rules is strictly proper.
+
+
+## Interval scoring rules
+
+
+Interval forecasts is a special case of quantile prediction. The $(1-\alpha)\times100\%$ is represent the central prediction interval. $\frac{\alpha}{2}$ and $1-\frac{\alpha}{2}$ quantiles are upper and lower endpoints (@GBR07).
+
+### Winkler loss scoring rules
+
+The most commonly  used intervel scoring rules is Winkler Loss scoring rules, it was proposed by @W72. 
+
+$$
+  S_\alpha^{int}(l,u;x)=(u-l)+\frac{2}{\alpha}(l-x)1\{x<l\}+\frac{2}{\alpha}(x-u)1\{x>u\}
+$$
+where l and u represent for the quoted $\frac{\alpha}{2}$ and $1-\frac{\alpha}{2}$ quantiles.
+
+Following the formula of interval score, the score mainly based on the results of interval forecasts at different conditional level. Therefore it has a wide range of applications and is suitable for different models. 
+
+
+### The prescriptive optimal interval forecast
+
+This interval scoring rules was proposed by @RDSS18. A event betweena forecaster F and adversary A, where F chooses d and A chooses a scalar $\delta\in[-\infty,0]$. Then othan the formula:
+
+$$
+  S^{int}(y,d,\delta;\alpha)=|d|+\delta(1\{y\in{d}\}-(1-\alpha))
+$$
+where $d=[d^l,d^u]$ with length $|d|=d^u-d^l$.
+
+## Distribution scoring rules
+
+Scoring rules supply the summary measures to evaluate probabilistic forecasts, it assigns a numerical score under the predictive distribution and the events that need to be predicted. (@GBR07) The function of scoring rules is to evaluate the calibration and the sharpness of the forecast distribution results at the same time, then evaluating the quality of probabilistic forecasts. For the results of produced scores, forecasters wish it can be minimized. 
+
+For variables on a continuous sample space, the most commonly used scoring rules are the logarithmic score (LogS), continuous ranked probability score (CRPS) and Dawid-Sebastiani score (DDS). They can be applied effectively to density forecasts. 
+
+### Logarithmic score
+
+For the scoring rules for evaluating probabilistic forecasts, the of the most commonly used rules is the Logarithmic score (logS). It was first proposed by @G52. It is a modified version of relative entropy and can be calculated for real forecasts and realizations. (@RS02) It is a strictly proper scoring rule. But if the prediction is continuous, using ignorance is troublesome (@P10). Despite its shortcomings, it can directly evaluate the results through the forecast model. Therefore, the logarithmic scoring rule can be used in many scenarios and is not limited to specific models. 
+
+The formula is:
+ $$
+      LogS(F,y)=logF(y)
+  $$
+For this report, we use the scoring rules to evaluation the probabilistic forecasts under Gaussian predictive distributions. Then the formula of the logarithmic score can be rewritten as below.
+  $$
+      LogS(N(\mu,\sigma^2),y)=\frac{(y-\mu)^2}{2\sigma^2}+log\sigma+\frac{1}{2}log2\pi
+  $$
+
+### Continuous Ranked Probability Score
+
+It is generally considered that it is unrealistic to limit the density forecasts. In the absence of restriction on density forecasts, the CRPS can define scoring rules directly in terms of predictive cumulative distribution functions. It focuses on observing the whole of forecast distributions rather than the special points in these distributions. It can use deterministic values to evaluate the results of probabilistic forecasts. Also, comparing with the CRPS, logarithmic score is a local strictly proper scoring rule. Therefore, there are not many restrictions on its use. 
+
+The formula of continuous ranked probability Score:
+
+   \[
+       CRPS(F,y)=\int_{-\infty}^{\infty}(F(x)-1\left\{y\leq{x}\right\})^2 dx
+   \]
+
+  \[
+    = E_F|Y-y|-\frac{1}{2}E_F|Y-Y'|
+  \]
+where Y and Y' are independent random variables with CDF F and finite first moment (@GR07). The CPRS can compare the probabilistic forecasts and point forecasts because when the CRPS drop to the absolute error, the probabilistic forecast is a point forecast. (@GK14)
+
+Also, when evaluating probabilistic forecasts under Gaussian predictive distribution the form will re-write:
+
+   \[
+       CRPS(N(\mu,\sigma^2),y)=\sigma\left(\frac{y-\mu}{\sigma}\left(2\Phi\left(\frac{y-\mu}{\sigma}\right)-1\right)+2\varphi\left(\frac{y-\mu}{\sigma}\right)-\frac{1}{\sqrt{\pi}}\right)
+  \]
+
+### Dawid-Sebastianti score
+
+The CRPS can be easy to understand and convenient to use, but it has a limitation. It can be hard to compute for complex forecast distributions. (@GK14). Therefore, Therefore, when we need to evaluate the probabilistic forecasts under the complex distribution, choosing Dawid-Sebastiani score is a viable alternative. 
+
+The formula of DSS
+  \[
+     DSS(F,y)=\frac{(y-\mu_F)^2}{\sigma_F^2}+2log\sigma_F
+  \]
+

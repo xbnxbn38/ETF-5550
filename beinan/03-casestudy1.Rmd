@@ -1,0 +1,176 @@
+# Case study one: ASX 200
+
+The ASX 200 is an index on the Australian Securities Exchange officially released on 31st March 2000. It uses market-weighted average calculations based on the 200 largest listed stocks in Australia. These stocks currently account for the Australian stock market value of 82%. It is considered to be the most important index to measure the operation of the Australian stock market.
+
+The data from ASX 200 is a kind of financial time series, it has the following characteristics. Firstly, The unconditional distribution is leptokurtic, it means that comparing with Gaussian distribution it has a high peak and heavy tails. Also, the return series appears to have a constant unconditional mean, so the time series of return might be stationary, some trend models are not suitable to use for financial times series as ETS model. Because of the volatility of return changes over time and volatility tends to arrive in clusters, the GARCH model is very suitable for use. We choose to use ARIMA model and ARIMA-GARCH model to fit model. Also, using these two models can be very intuitively and clearly to compare the results of forecasting and scoring. 
+
+The raw data comes from @YH, it is the daily data over 10 years period until the beginning of 2018. Because of the features of financial time series, we processed data and obtain its simple return. In order to facilitate the final assessment, we have set the data before 2017 as train data, the data for 2017 as test data. Then using train data to select suitable ARIMA model and GARCH model to make a forecast. For the final results, then to evaluate interval forecasts and probabilistic forecasts by using the interval scoring rules and distribution scoring rules respectively. 
+
+```{r asxdata, include=FALSE}
+raw.asx <- read_csv("data/s&p asx 200.csv")
+asx <- as.ts(raw.asx[, 6])
+dfasx <- diff(asx)
+
+dftrain <- window(dfasx, end = 2800)
+dftest <- window(dfasx, start = 2801)
+```
+
+## Select suitable models
+
+In order to predict data correctly, we should select suitable models firstly. For select ARIMA model, one simple way is to use auto. arima code, it is formed from R package "forecast" by @RH181. This result shows that this ARIMA(0,0,3) is the most suitable for train set of ASX 200. 
+
+```{r modelselect1, message=FALSE}
+dffit.arima <- auto.arima(dftrain,stepwise = F)
+knitr::kable(dffit.arima$coef, caption = "ARIMA model select", booktabs = TRUE)
+```
+
+Follow the results obtained above, we can find a suitable GARCH model by using R package "fGrach" (@WD17). 
+
+```{r garch, include=FALSE, dependson="arima"}
+garch11_results <- garchFit(~ arma(0, 3) + garch(1, 1), data = dftrain, trace = FALSE)
+garch12_results <- garchFit(~ arma(0, 3) + garch(1, 2), data = dftrain, trace = FALSE)
+garch21_results <- garchFit(~ arma(0, 3) + garch(2, 1), data = dftrain, trace = FALSE)
+garch22_results <- garchFit(~ arma(0, 3) + garch(2, 2), data = dftrain, trace = FALSE)
+garch1_results <- garchFit(~ arma(0, 3) + garch(1, 0), data = dftrain, trace = FALSE)
+garch2_results <- garchFit(~ arma(0, 3) + garch(2, 0), data = dftrain, trace = FALSE)
+
+garch11_results@fit$ics -> garch11
+garch12_results@fit$ics -> garch12
+garch21_results@fit$ics -> garch21
+garch22_results@fit$ics -> garch22
+garch1_results@fit$ics -> arch1
+garch2_results@fit$ics -> arch2
+
+garch <- rbind(garch11, garch12, garch21, garch22, arch1, arch2)
+```
+
+```{r table1,message=FALSE, dependson="garch"}
+knitr::kable(round(garch, 3), caption = "Garch model select", booktabs = TRUE) 
+```
+
+After comparing the AIC of each Garch model, the AIC of the MA(3)-Garch(1,1) is 10.608, it is the smaller than other models. Therefore, The MA(3)-Garch(1,1) is considered the most suitable model for the train set. 
+
+## Interval forecast for the ASX 200 index
+
+After obtaining the most suitable ARIMA model and GARCH model, we first evaluate the results of the ARIMA model by interval scoring rules. By setting 21 different prediction intervals $(1-\alpha)\times100\%$ from 1% to 99%, the results of interval forecasts at different prediction interval level are obtained. After evaluating by interval scoring rules, the change of evaluation score with the extension of the confidence interval can be shown. 
+
+```{r r Infasx, include=FALSE}
+## arima 
+
+dffc.arima <- forecast(dffit.arima, h = length(dftest), level=c(1,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,99))
+dffc.arima 
+
+#loop
+c=1:21
+
+b=(100-dffc.arima$level)/100
+w<-cbind(c,b)%>% as.matrix()
+
+ASX_PIS.arima<-matrix(0,nrow=21,ncol=1)
+for (b in 1:21){
+  ASX_PIS.arima[b]<-PIS(as.numeric(dftest),l=(dffc.arima$lower[, w[b,1]]),u=(dffc.arima$upper[, w[b,1]]),a=w[b,2])%>% mean()
+}
+
+colnames(ASX_PIS.arima)="Interval scores" 
+rownames(ASX_PIS.arima)<-dffc.arima$level
+```
+
+```{R plot1, message=FALSE}
+data.frame(level=dffc.arima$level, PIS=ASX_PIS.arima[,1]) %>%
+  ggplot(aes(x=level, y=PIS)) +
+  geom_point() + geom_line()+
+  ggtitle("Interval scores for ARIMA model at different confident level")
+```
+
+The upper curve was generated by processing the data. This graph shows that as the confidence interval increases, the interval score shows a trend of accelerating and increasing, and the score reaches the highest at 99%. The lower the score represents the better result of the interval forecasts, so the information from this curve shows that the interval forecasts for the simple return of the ASX200 by using ARIMA model are better when the prediction interval level is smaller 
+
+Then use the same way to set prediction intervals, and use GARCH model to forecast the intervals at a different prediction level. After using interval scoring rules to evaluate the results and making graph. After that, a score change curve is obtained, which shows the result very similar to that obtained by using the ARIMA model before. 
+
+```{R garchPIS, include=FALSE}
+## garch
+garch_results <- garchFit(~ arma(0, 3) + garch(1, 1), data = dftrain, trace = FALSE)
+
+ASX_PIS.garch<-matrix(0,nrow=21,ncol=1)
+for(b in 1:21){
+  fc.garch <- predict(garch_results, n.ahead = length(dftest), crit_val = 1-w[b,2])
+  fcmean.garch<- as.numeric(fc.garch$meanForecast)
+  fcsd.garch<- as.numeric(fc.garch$standardDeviation)
+  upper.garch=fcmean.garch+fcsd.garch*qnorm(1-w[b,2]/2)
+  lower.garch=fcmean.garch-fcsd.garch*qnorm(1-w[b,2]/2)
+  ASX_PIS.garch[b]<-PIS(as.numeric(dftest),l=lower.garch,u=upper.garch,a=w[b,2])%>%mean()
+}
+
+colnames(ASX_PIS.garch)="Interval scores" 
+rownames(ASX_PIS.garch)<-dffc.arima$level
+
+```
+
+```{R plot2, message=FALSE}
+data.frame(level=dffc.arima$level, PIS=ASX_PIS.garch[,1]) %>%
+  ggplot(aes(x=level, y=PIS)) +
+  geom_point() + geom_line() +
+  ggtitle("Interval scores for Garch model at different confident level")
+```
+
+This graph also shows that as the prediction interval expands, the score increases. It means that the smaller prediction intervals show better score results by using GRACH model. Because the images produced by using the two different models are extremely similar, we put them together for comparison.
+
+```{r plot3,message=FALSE}
+data.frame(ARIMA=ASX_PIS.arima[,1],
+           GARCH=ASX_PIS.garch[,1],level=dffc.arima$level)%>%
+  ggplot(aes(x=level,y=PIS))+
+  geom_line(aes(y = ARIMA,colour="ARIMA"))+
+  geom_line(aes(y = GARCH,colour="GARCH"))+
+  ggtitle("Comparing the interval scores of the two models at different level")
+
+ 
+```
+
+By comparing these two curves, their overall characteristics are extremely similar. Their scores are not very different at smaller confidence intervals, but in the larger prediction interval, the scores are slightly different by using these two different models. The interval scores of interval forecasts by using GRACH model is becoming smaller than that by using ARIMA model as the prediction interval expands. So, at high confident interval level, interval forecasts by using GARCH model has a relatively good performance. This result illustrates, for the interval forecast of financial return time series, GARCH model can provide the more efficient result to forecasters. And it is also proving that it is more suitable for fitting financial data. 
+
+
+
+## Probabilistic forecasts for the ASX 200 index
+
+For probabilistic forecasts, we still using the ARIMA(0,0,3) model and MA(3)-GARCH(1,1) model to fit data and make a forecast, which was produced at Chapter 3.1. Afterward, the train set is also predicted by two different models. However, unlike the result obtained in 3.2, we do not need to set the confidence interval. Instead, use packages R packages "scoringRules" (@JKL17), we can obtain the evaluation results by using three distribution scoring rules (Logarithmic score, Continuous Ranked Probability Score and Dawid-Sebastianti score) directly. 
+
+```{r arima, include=FALSE}
+
+# arima
+dffit.arima <- auto.arima(dftrain,stepwise = F)
+dffc.arima <- forecast(dffit.arima, h = length(dftest))
+dffcmean.arima <- as.numeric(dffc.arima$mean)
+dffcsd.arima <- as.numeric((dffc.arima$upper[, 2] - dffc.arima$lower[, 2]) / 2 / 1.96)
+
+dfcrps <- crps(as.numeric(dftest), family = "normal", mean = dffcmean.arima, sd = dffcsd.arima) %>% mean() %>% round(digits = 5)
+dflogs <- logs_norm(as.numeric(dftest), mean = dffcmean.arima, sd = dffcsd.arima) %>% mean() %>% round(digits = 5)
+dfdss <- dss_norm(as.numeric(dftest), mean = dffcmean.arima, sd = dffcsd.arima) %>% mean() %>% round(digits = 5)
+
+ARIMA <- c(dfcrps, dflogs, dfdss)
+```
+
+
+
+```{r garchfit, include=FALSE, dependson="arima"}
+# garch
+garch_results <- garchFit(~ arma(0, 3) + garch(1, 1), data = dftrain, trace = FALSE)
+garch_results
+fc.garch <- predict(garch_results, n.ahead = length(dftest), crit_val = 0.95)
+
+fcmean.garch <- as.numeric(fc.garch$meanForecast)
+fcsd.garch <- as.numeric(fc.garch$standardDeviation)
+
+crps <- crps(as.numeric(dftest), family = "normal", mean = fcmean.garch, sd = fcsd.garch) %>% mean() %>% round(digits = 5)
+logs <- logs_norm(as.numeric(dftest), mean = fcmean.garch, sd = fcsd.garch) %>% mean() %>% round(digits = 5)
+dss <- dss_norm(as.numeric(dftest), mean = fcmean.garch, sd = fcsd.garch) %>% mean() %>% round(digits = 5)
+
+GARCH <- c(crps, logs, dss)
+```
+
+```{r table2,message=FALSE, dependson="garchfit"}
+ASX <- round(rbind(GARCH, ARIMA),2)
+colnames(ASX) <- c("CRPS","LogS","DSS")
+rownames(ASX) <- c("GARCH","ARIMA")
+  knitr::kable(ASX, caption = "Scoring Rules for MA model and GARCH model", booktabs = TRUE)
+```
+
+According to the table above, the results of three type scoring rules of MA(3)-garch(1,1) model are all smaller than the result of MA(3) Model. Therefore, it can be shown here that the garch model has a better prediction performance compared to MA(3).
