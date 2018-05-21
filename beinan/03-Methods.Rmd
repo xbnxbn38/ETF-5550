@@ -1,0 +1,26 @@
+# Method
+
+## Model select
+
+Before studying the scoring rules, it is necessary to use the appropriate model to process the data and get the predicted results separately. In this article, four models are used, ARIMA, GARCH, ETS and Random walk. And ARIMA and GARCH is used for financial data in case study one, and ARIMA, ETS and Random walk in case study two.
+
+### ARIMA model
+
+For the selection of the suitable ARIMA model, the traditional method is to observe the images of ACF and PACF of data to set the lags of the model to get the corresponding model. After testing whether the residuals look like white noise and comparing the AIC or the BIC of all the models (AIC is used in this artcle), choose the model with the smallest AIC to be the most suitable model. In order to simplify and accurately search for suitable ARIMA models, the "auto.arima" code (from R package "forecast" by @RH181) is be used in both case studies.
+
+Akaike’s Information Criterion (AIC) is commonly used to select the order of ARIMA model.
+$$AIC=-2log(L)+2(p+q+k+1)$$
+where L is the likelihood of the data, $k=1$ if $c\neq0$ and $k=0$ if $c=0$.
+
+Bayesian Information Criterion
+$$BIC=AIC+[log(T)-2](p+q+k+1)$$
+Good models are obtained by minimizing the AIC or BIC.
+### GARCH model
+
+### ETS model
+
+### Random walk model
+
+## Scoring rule select
+
+### 

@@ -18,7 +18,7 @@ The scoring rule $S$ is proper relative to the class $\cal{F}$ if $$S(F,G)\geq S
 ## Interval scoring rules
 
 
-Interval forecasts is a special case of quantile prediction. The $(1-\alpha)\times100\%$ is represent the central prediction interval. $\frac{\alpha}{2}$ and $1-\frac{\alpha}{2}$ quantiles are upper and lower endpoints (@GBR07).
+Interval forecasts is a special case of quantile prediction. The $(1-\alpha)\times100\%$ is represent the central prediction interval. $\frac{\alpha}{2}$ and $\ell-\frac{\alpha}{2}$ quantiles are upper and lower endpoints (@GBR07).
 
 ### Winkler loss scoring rules
 
@@ -27,7 +27,7 @@ The most commonly  used intervel scoring rules is Winkler Loss scoring rules, it
 $$
   S_\alpha^{int}(l,u;x)=(u-l)+\frac{2}{\alpha}(l-x)1\{x<l\}+\frac{2}{\alpha}(x-u)1\{x>u\}
 $$
-where l and u represent for the quoted $\frac{\alpha}{2}$ and $1-\frac{\alpha}{2}$ quantiles.
+where l and u represent for the quoted $\frac{\alpha}{2}$ and $\ell-\frac{\alpha}{2}$ quantiles.
 
 Following the formula of interval score, the score mainly based on the results of interval forecasts at different conditional level. Therefore it has a wide range of applications and is suitable for different models. 
 

@@ -1,0 +1,181 @@
+# Case study two: M3 datasets 
+
+The M3 dataset includes 3003 different type time series, it is from R packages "Mcomp" (@RH182), it can provide more information for evaluating probabilistic forecast by using scoring rule. For each time series, there are a train set and a test set, which can be easily used to build each forecast models, then predicting and scoring. Different from previous financial data, M3 datasets can use different models for predictive analysis at the same time. In this part, three prediction models are chosen, ARIMA model, ETS model, and Random walk model.
+
+As in the previous chapter, before we start forecasting and evaluating, the suitable models should be selected. However, for the M3 datasets, there are more than 3000 different time series, so we have modeled all the time series separately by these three models. 
+
+
+Before the analysis of the M3 dataset, there is a problem that needs to be noticed. These different time sequences come from different fields and their units are different. It is necessary to standardize each data for evaluating the value of their prediction results. If data are not standardized, the final result will be the mistake. In case study two, four scoring rules will be used, and the interval score and CRPS score need to be standardized, while DSS and LogS. It will be discussed in detail later.
+
+## Interval forecast for the M3 competition data 
+
+Like the case study one, we first make interval forecasts for every times series from M3 datasets by using three different model, ARIMA model, ETS model and random walk model. Meanwhile, in order to eliminate the impact of units from each time series, the interval forecasts by using average method are also produced.  
+
+Since there are more than 3000 time series, it is inefficient to find four different models for each time sequence, and use the unified automatic program codes from R package "forecasts" by @RH181 to choose the models. Use the train set of each time series to find the most suitable model, and calculate the interval score through the forecasts results and test sets. After that, each interval score from all time series by ARIMA model, ETS model, and Random walk model is divided into the result of the average method to standardize and remove the influence of different units. 
+
+
+The interval score we use here is the same as the third chapter, using the YY scoring rule.
+
+```{r M3PIS,include=FALSE}
+
+store_ifc_results <- function(u, method)
+{
+  fc <- u[["x"]] %>% method(h=u[["h"]],level=95)
+  return(cbind(actual=u[["xx"]], lower=c(fc$lower),upper=c(fc$upper)))
+}
+
+calc_PIS <- function(x, scorefn)
+{
+  scores <- scorefn(y=x[,"actual"], l=x[,"lower"], u=x[,"upper"],a=0.05)
+  return(mean(scores))
+}
+
+q <- seq(3003)
+
+M3_PIS <- map(M3[q], function(x) {
+  c(x[["sn"]], x[["type"]], x[["period"]])
+}) %>%
+  do.call(what=rbind.data.frame) %>%
+  as_tibble()
+colnames(M3_PIS) <- c("id","type","period")
+
+rwifc <- map(M3[q], store_ifc_results, method=rwf)
+
+etsifc <- map(M3[q], store_ifc_results,
+             method=function(x, h, level){forecast(ets(x), h=h, level=level)})
+
+arimaifc <- map(M3[q], store_ifc_results,
+               method=function(x, h, level){forecast(auto.arima(x), h=h, level=level)})
+
+#Eliminating the impact of data units in the model, I create new PIS by mean forecast
+
+meanfc<-map(M3[q], store_ifc_results, method=meanf)
+mean_PIS<-map_dbl(meanfc, calc_PIS, scorefn=PIS)
+
+PIS_scores <- mutate(M3_PIS,
+                      RWF = map_dbl(rwifc, calc_PIS, scorefn=PIS)/mean_PIS,
+                      ETS = map_dbl(etsifc, calc_PIS, scorefn=PIS)/mean_PIS,
+                      ARIMA = map_dbl(arimaifc, calc_PIS, scorefn=PIS)/mean_PIS
+) %>%
+  gather(-id, -type, -period, value=PIS, key=model)
+
+PIS_scores
+M3ilong<-gather(PIS_scores, -id, -type, -period, -model, key=ScoringMethod, value=Score)
+```
+
+```{r boxplotPIS,message=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="M3"}
+# Produce some boxplots
+M3ilong %>%
+  mutate(
+    period = fct_collapse(period, YEARLY = c("OTHER","YEARLY")),
+    period = fct_relevel(period, "YEARLY","QUARTERLY","MONTHLY")
+  ) %>%
+  ggplot() +
+    geom_boxplot(aes(x=model, y=Score, fill=ScoringMethod)) +
+    facet_grid(ScoringMethod ~ period, scales="free") +
+    guides(fill=FALSE) +
+    xlab("Forecasting method") +
+    ggtitle("Scores for the M3 data") -> I
+I
+```
+
+```{r boxplotlogPIS,message=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="boxplot"}
+# Produce some boxplots on log scale
+I + scale_y_log10()
+```
+
+## Probabilistic forecasts for the M3 competition data
+
+In this part, three prediction models (ARIMA model, ETS model, and Random walk model) still be used as before. After separately predicting these 3003 different time series, we reached 9009 forecast sets. Then each of these forecasting sets is evaluated by three different scoring rules separately. And to average the evaluation results for each different time series. Use these evaluation results to generate three boxplots, they represent the performance of different models to predict under different scoring rules.
+
+Because of the data should be standardized for CRPS scoring rules, so we use the z-scores standardization to transform the data form M3 data sets. And the LogS and DSS scoring are already transformed, so we should not standards the data. 
+
+```{r M3,include=FALSE}
+# Work on subset of data?
+#k <- sample(3003, size=100)
+k <- seq(3003)
+
+M3_scores <- map(M3[k], function(x) {
+  c(x[["sn"]], x[["type"]], x[["period"]])
+}) %>%
+  do.call(what=rbind.data.frame) %>%
+  as_tibble()
+colnames(M3_scores) <- c("id","type","period")
+
+rwfc <- map(M3[k], store_fc_results, method=rwf)
+
+etsfc <- map(M3[k], store_fc_results,
+             method=function(x, h, level){forecast(ets(x), h=h, level=level)})
+
+arimafc <- map(M3[k], store_fc_results,
+               method=function(x, h, level){forecast(auto.arima(x), h=h, level=level)})
+
+#Eliminating the impact of data units in the model for CRPS
+
+calc_crps <- function(x, scorefn)
+{
+  scores = (scorefn(y=x[,"actual"], mean=x[,"mean"], sd=x[,"sd"]))/x[,"sd"]
+  return(mean(scores))
+}
+
+#crps
+crps_scores <- mutate(M3_scores,
+                      RWF = map_dbl(rwfc, calc_crps, scorefn=crps_norm),
+                      ETS = map_dbl(etsfc, calc_crps, scorefn=crps_norm),
+                      ARIMA = map_dbl(arimafc, calc_crps, scorefn=crps_norm)
+) %>%
+  gather(-id, -type, -period, value=CRPS, key=model)
+
+#logs
+log_scores <- mutate(M3_scores,
+                     RWF = map_dbl(rwfc, calc_scores, scorefn=logs_norm),
+                     ETS = map_dbl(etsfc, calc_scores, scorefn=logs_norm),
+                     ARIMA = map_dbl(arimafc, calc_scores, scorefn=logs_norm)
+) %>%
+  gather(-id, -type, -period, value=LOGS, key=model)
+#dss
+dss_scores<-mutate(M3_scores,
+                   RWF = map_dbl(rwfc, calc_scores, scorefn=dss_norm),
+                   ETS = map_dbl(etsfc, calc_scores, scorefn=dss_norm),
+                   ARIMA = map_dbl(arimafc, calc_scores, scorefn=dss_norm)
+) %>%
+  gather(-id, -type, -period, value=DSS, key=model)
+
+
+M3_scores1 <- left_join(crps_scores,log_scores)
+#M3_scores2<- left_join(dss_scores,lin_scores)
+M3_scores<-left_join(M3_scores1,dss_scores)
+
+
+
+# Now make it long form
+M3long <- gather(M3_scores, -id, -type, -period, -model, key=ScoringMethod, value=Score)
+
+```
+
+```{r boxplot,message=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="M3"}
+# Produce some boxplots
+M3long %>%
+  mutate(
+    period = fct_collapse(period, YEARLY = c("OTHER","YEARLY")),
+    period = fct_relevel(period, "YEARLY","QUARTERLY","MONTHLY")
+  ) %>%
+  ggplot() +
+    geom_boxplot(aes(x=model, y=Score, fill=ScoringMethod)) +
+    facet_grid(ScoringMethod ~ period, scales="free") +
+    guides(fill=FALSE) +
+    xlab("Forecasting method") +
+    ggtitle("Scores for the M3 data") -> p
+p
+```
+
+
+```{r boxplotlog,message=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="boxplot"}
+# Produce some boxplots on log scale
+p + scale_y_log10()
+```
+
+Although it cannot be known from the above figure how many outliers are generated base on the different forecast model by different scoring rules, boxplots can show 5th, 25th, 50th, 75th and 95th percentiles of central prediction interval width. The width of the obvious random walk model is much narrower than that of other models, which means that its sharpness is sharpest, and the calibration is more accurate, although its mean value is not the lowest. Therefore, in the case of using M3 data sets, the quality of probability predictions derived from random walk model is even higher. This also proves that using scoring rules can simultaneously evaluate the sharpness and calibration of probabilistic results.
+
+
+

@@ -169,6 +169,20 @@ probabilistic forecast. Therefore, to evaluate the calibration and
 sharpness of probability prediction is an important means to evaluate
 probability prediction results.
 
+\section{Different between confident interval and prediction
+interval}\label{different-between-confident-interval-and-prediction-interval}
+
+Before discussing scoring rules, we must first understand the difference
+between confidence interval and prediction interval. These two kinds of
+intervals are often considered to be the same, but this view is wrong,
+so they need to be very careful when used. For their differences,
+\textcite{RH13} gave a detailed introduction on his blog. The prediction
+interval is an interval related to the random variable, and all of the
+random variable are located in the interval. In contrast, confidence
+interval is a concept of frequency, which is related to parameters. The
+prediction interval is used in the interval forecasts and probabilistic
+forecasts.
+
 \section{Property of scoring rules}\label{property-of-scoring-rules}
 
 Assume the result of probabilistic forecasts is \(F\), \(F \in \cal{F}\)
@@ -183,23 +197,10 @@ is strictly proper.
 
 \section{Interval scoring rules}\label{interval-scoring-rules}
 
-\subsection{Different between confident interval and prediction
-interval}\label{different-between-confident-interval-and-prediction-interval}
-
-Before discussing interval scoring, we must first understand the
-difference between confidence interval and prediction interval. These
-two kinds of intervals are often considered to be the same, but this
-view is wrong, so they need to be very careful when used. For their
-differences, \textcite{RH13} gave a detailed introduction on his blog.
-The prediction interval is an interval related to the random variable,
-and all of the random variable are located in the interval. In contrast,
-confidence interval is a concept of frequency, which is related to
-parameters.
-
 Interval forecasts is a special case of quantile prediction. The
 \((1-\alpha)\times100\%\) is represent the central prediction interval.
-\(\frac{\alpha}{2}\) and \(1-\frac{\alpha}{2}\) quantiles are upper and
-lower endpoints (\textcite{GBR07}).
+\(\frac{\alpha}{2}\) and \(\ell-\frac{\alpha}{2}\) quantiles are upper
+and lower endpoints (\textcite{GBR07}).
 
 \subsection{Winkler loss scoring
 rules}\label{winkler-loss-scoring-rules}
@@ -210,7 +211,7 @@ rules, it was proposed by \textcite{W72}.
 \[
   S_\alpha^{int}(l,u;x)=(u-l)+\frac{2}{\alpha}(l-x)1\{x<l\}+\frac{2}{\alpha}(x-u)1\{x>u\}
 \] where l and u represent for the quoted \(\frac{\alpha}{2}\) and
-\(1-\frac{\alpha}{2}\) quantiles.
+\(\ell-\frac{\alpha}{2}\) quantiles.
 
 Following the formula of interval score, the score mainly based on the
 results of interval forecasts at different conditional level. Therefore
@@ -311,6 +312,43 @@ The formula of DSS \[
      DSS(F,y)=\frac{(y-\mu_F)^2}{\sigma_F^2}+2log\sigma_F
   \]
 
+\chapter{Method}\label{method}
+
+\section{Model select}\label{model-select}
+
+Before studying the scoring rules, it is necessary to use the
+appropriate model to process the data and get the predicted results
+separately. In this article, four models are used, ARIMA, GARCH, ETS and
+Random walk. And ARIMA and GARCH is used for financial data in case
+study one, and ARIMA, ETS and Random walk in case study two.
+
+\subsection{ARIMA model}\label{arima-model}
+
+For the selection of the suitable ARIMA model, the traditional method is
+to observe the images of ACF and PACF of data to set the lags of the
+model to get the corresponding model. After testing whether the
+residuals look like white noise and comparing the AIC or the BIC of all
+the models (AIC is used in this artcle), choose the model with the
+smallest AIC to be the most suitable model. In order to simplify and
+accurately search for suitable ARIMA models, the ``auto.arima'' code
+(from R package ``forecast'' by \textcite{RH181}) is be used in both
+case studies.
+
+Akaike's Information Criterion (AIC) is commonly used to select the
+order of ARIMA model. \[AIC=-2log(L)+2(p+q+k+1)\] where L is the
+likelihood of the data, \(k=1\) if \(c\neq0\) and \(k=0\) if \(c=0\).
+
+Bayesian Information Criterion \[BIC=AIC+[log(T)-2](p+q+k+1)\] Good
+models are obtained by minimizing the AIC or BIC. \#\#\# GARCH model
+
+\subsection{ETS model}\label{ets-model}
+
+\subsection{Random walk model}\label{random-walk-model}
+
+\section{Scoring rule select}\label{scoring-rule-select}
+
+\subsection{}\label{section}
+
 \chapter{Case study one: ASX 200}\label{case-study-one-asx-200}
 
 The ASX 200 is an index on the Australian Securities Exchange officially
@@ -346,9 +384,8 @@ distribution scoring rules respectively.
 
 In order to predict data correctly, we should select suitable models
 firstly. For select ARIMA model, one simple way is to use auto. arima
-code, it is formed from R package ``forecast'' by \textcite{RH181}. This
-result shows that this ARIMA(0,0,3) is the most suitable for train set
-of ASX 200.
+code. This result shows that this ARIMA(0,0,3) is the most suitable for
+train set of ASX 200.
 
 \begin{table}
 
@@ -471,6 +508,91 @@ According to the table above, the results of three type scoring rules of
 MA(3)-garch(1,1) model are all smaller than the result of MA(3) Model.
 Therefore, it can be shown here that the garch model has a better
 prediction performance compared to MA(3).
+
+\chapter{Case study two: M3 datasets}\label{case-study-two-m3-datasets}
+
+The M3 dataset includes 3003 different type time series, it is from R
+packages ``Mcomp'' (\textcite{RH182}), it can provide more information
+for evaluating probabilistic forecast by using scoring rule. For each
+time series, there are a train set and a test set, which can be easily
+used to build each forecast models, then predicting and scoring.
+Different from previous financial data, M3 datasets can use different
+models for predictive analysis at the same time. In this part, three
+prediction models are chosen, ARIMA model, ETS model, and Random walk
+model.
+
+As in the previous chapter, before we start forecasting and evaluating,
+the suitable models should be selected. However, for the M3 datasets,
+there are more than 3000 different time series, so we have modeled all
+the time series separately by these three models.
+
+Before the analysis of the M3 dataset, there is a problem that needs to
+be noticed. These different time sequences come from different fields
+and their units are different. It is necessary to standardize each data
+for evaluating the value of their prediction results. If data are not
+standardized, the final result will be the mistake. In case study two,
+four scoring rules will be used, and the interval score and CRPS score
+need to be standardized, while DSS and LogS. It will be discussed in
+detail later.
+
+\section{Interval forecast for the M3 competition
+data}\label{interval-forecast-for-the-m3-competition-data}
+
+Like the case study one, we first make interval forecasts for every
+times series from M3 datasets by using three different model, ARIMA
+model, ETS model and random walk model. Meanwhile, in order to eliminate
+the impact of units from each time series, the interval forecasts by
+using average method are also produced.
+
+Since there are more than 3000 time series, it is inefficient to find
+four different models for each time sequence, and use the unified
+automatic program codes from R package ``forecasts'' by \textcite{RH181}
+to choose the models. Use the train set of each time series to find the
+most suitable model, and calculate the interval score through the
+forecasts results and test sets. After that, each interval score from
+all time series by ARIMA model, ETS model, and Random walk model is
+divided into the result of the average method to standardize and remove
+the influence of different units.
+
+The interval score we use here is the same as the third chapter, using
+the YY scoring rule.
+
+\includegraphics[width=1\linewidth]{thesis_files/figure-latex/boxplotPIS-1}
+
+\includegraphics[width=1\linewidth]{thesis_files/figure-latex/boxplotlogPIS-1}
+
+\section{Probabilistic forecasts for the M3 competition
+data}\label{probabilistic-forecasts-for-the-m3-competition-data}
+
+In this part, three prediction models (ARIMA model, ETS model, and
+Random walk model) still be used as before. After separately predicting
+these 3003 different time series, we reached 9009 forecast sets. Then
+each of these forecasting sets is evaluated by three different scoring
+rules separately. And to average the evaluation results for each
+different time series. Use these evaluation results to generate three
+boxplots, they represent the performance of different models to predict
+under different scoring rules.
+
+Because of the data should be standardized for CRPS scoring rules, so we
+use the z-scores standardization to transform the data form M3 data
+sets. And the LogS and DSS scoring are already transformed, so we should
+not standards the data.
+
+\includegraphics[width=1\linewidth]{thesis_files/figure-latex/boxplot-1}
+
+\includegraphics[width=1\linewidth]{thesis_files/figure-latex/boxplotlog-1}
+
+Although it cannot be known from the above figure how many outliers are
+generated base on the different forecast model by different scoring
+rules, boxplots can show 5th, 25th, 50th, 75th and 95th percentiles of
+central prediction interval width. The width of the obvious random walk
+model is much narrower than that of other models, which means that its
+sharpness is sharpest, and the calibration is more accurate, although
+its mean value is not the lowest. Therefore, in the case of using M3
+data sets, the quality of probability predictions derived from random
+walk model is even higher. This also proves that using scoring rules can
+simultaneously evaluate the sharpness and calibration of probabilistic
+results.
 
 \chapter{Conclusion}\label{conclusion}
 
