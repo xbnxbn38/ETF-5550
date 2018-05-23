@@ -4,7 +4,7 @@ title: |
  
 author: 
 - Beinan Xu \newline
-- (supervisor:Professor Rob Hyndman)
+- \small (supervisor:Professor Rob Hyndman)
 date: "`r format(Sys.time(), '%d %B %Y')`"
 fontsize: 14pt
 output:
@@ -26,7 +26,7 @@ library(scoringRules)
 library(lubridate)
 library(fGarch)
 library(Mcomp)
-library(gridExtra)
+
 
 store_fc_results <- function(u, method)
 {
@@ -212,11 +212,6 @@ data.frame(level=dffc.arima$level, PIS=ASX_PIS.garch[,1]) %>%
 ```
 
 
-```{R plot3, message=FALSE}
-grid.arrange(AA,GG, nrow=1)
-```
-
-# Evaluating by interval forecast 
 
 ## Comparing two models
 ```{r plot4,message=FALSE}
@@ -231,6 +226,10 @@ data.frame(ARIMA=ASX_PIS.arima[,1],
 ```
 
 # Evaluation of probablisitic forecasts
+
+* how to forecast and evaluation.
+
+# Result of evaluation
 
 ```{r arima, include=FALSE}
 
@@ -313,15 +312,12 @@ etsifc <- map(M3[q], store_ifc_results,
 arimaifc <- map(M3[q], store_ifc_results,
                method=function(x, h, level){forecast(auto.arima(x), h=h, level=level)})
 
-#Eliminating the impact of data units in the model, I create new PIS by mean forecast
-
-meanfc<-map(M3[q], store_ifc_results, method=meanf)
-mean_PIS<-map_dbl(meanfc, calc_PIS, scorefn=PIS)
+#Eliminating the impact of data units in the model, I create new PIS by naive forecast
+RWFI = map_dbl(rwifc, calc_PIS, scorefn=PIS)
 
 PIS_scores <- mutate(M3_PIS,
-                      RWF = map_dbl(rwifc, calc_PIS, scorefn=PIS)/mean_PIS,
-                      ETS = map_dbl(etsifc, calc_PIS, scorefn=PIS)/mean_PIS,
-                      ARIMA = map_dbl(arimaifc, calc_PIS, scorefn=PIS)/mean_PIS
+                      ETS = map_dbl(etsifc, calc_PIS, scorefn=PIS)/RWFI,
+                      ARIMA = map_dbl(arimaifc, calc_PIS, scorefn=PIS)/RWFI
 ) %>%
   gather(-id, -type, -period, value=PIS, key=model)
 
@@ -329,7 +325,7 @@ PIS_scores
 M3ilong<-gather(PIS_scores, -id, -type, -period, -model, key=ScoringMethod, value=Score)
 ```
 
-```{r boxplotPIS,include=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="M3"}
+```{r boxplotPIS,include=FALSE}
 # Produce some boxplots
 M3ilong %>%
   mutate(
@@ -343,13 +339,14 @@ M3ilong %>%
     xlab("Forecasting method") +
     ggtitle("Scores for the M3 data") -> I
 I
-II<-I+scale_y_log10()
+
 ```
 
 
 ```{r boxplotlogPIS,message=FALSE}
 # Produce some boxplots on log scale
-grid.arrange(I,II, nrow=1)
+I + scale_y_log10()
+
 ```
 
 # Evaluating by probilistic forecasts
@@ -358,10 +355,11 @@ grid.arrange(I,II, nrow=1)
 * Standardization for data
 
 # Evaluating distribution scores
-```{r M3,include=FALSE}
+
+```{r M3DF,include=FALSE}
 # Work on subset of data?
 #k <- sample(3003, size=100)
-k <- seq(3003)
+k <- seq(500)
 
 M3_scores <- map(M3[k], function(x) {
   c(x[["sn"]], x[["type"]], x[["period"]])
@@ -380,30 +378,26 @@ arimafc <- map(M3[k], store_fc_results,
 
 #Eliminating the impact of data units in the model for CRPS
 
-calc_crps <- function(x, scorefn)
-{
-  scores = (scorefn(y=x[,"actual"], mean=x[,"mean"], sd=x[,"sd"]))/x[,"sd"]
-  return(mean(scores))
-}
+
+RWFD = map_dbl(rwfc, calc_scores, scorefn=crps_norm)
 
 #crps
 crps_scores <- mutate(M3_scores,
-                      RWF = map_dbl(rwfc, calc_crps, scorefn=crps_norm),
-                      ETS = map_dbl(etsfc, calc_crps, scorefn=crps_norm),
-                      ARIMA = map_dbl(arimafc, calc_crps, scorefn=crps_norm)
+                      ETS = map_dbl(etsfc, calc_scores, scorefn=crps_norm)/RWFD,
+                      ARIMA = map_dbl(arimafc, calc_scores, scorefn=crps_norm)/RWFD
 ) %>%
   gather(-id, -type, -period, value=CRPS, key=model)
 
 #logs
 log_scores <- mutate(M3_scores,
-                     RWF = map_dbl(rwfc, calc_scores, scorefn=logs_norm),
+                     #RWF = map_dbl(rwfc, calc_scores, scorefn=logs_norm),
                      ETS = map_dbl(etsfc, calc_scores, scorefn=logs_norm),
                      ARIMA = map_dbl(arimafc, calc_scores, scorefn=logs_norm)
 ) %>%
   gather(-id, -type, -period, value=LOGS, key=model)
 #dss
 dss_scores<-mutate(M3_scores,
-                   RWF = map_dbl(rwfc, calc_scores, scorefn=dss_norm),
+                   #RWF = map_dbl(rwfc, calc_scores, scorefn=dss_norm),
                    ETS = map_dbl(etsfc, calc_scores, scorefn=dss_norm),
                    ARIMA = map_dbl(arimafc, calc_scores, scorefn=dss_norm)
 ) %>%
@@ -421,7 +415,8 @@ M3long <- gather(M3_scores, -id, -type, -period, -model, key=ScoringMethod, valu
 
 ```
 
-```{r boxplot,include=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="M3"}
+
+```{r boxplotPF,include=FALSE}
 # Produce some boxplots
 M3long %>%
   mutate(
@@ -435,19 +430,22 @@ M3long %>%
     xlab("Forecasting method") +
     ggtitle("Scores for the M3 data") -> p
 p
-pp<-p + scale_y_log10()
 ```
 
 
-```{r boxplotlog,message=FALSE}
+
+```{r boxplotlogDF,message=FALSE}
 # Produce some boxplots on log scale
-grid.arrange(p,pp, nrow=1)
+p + scale_y_log10()
 ```
+
+
 
 # conclusion
 
 * Conclusion
 * Further discussion
+
 
 #  Q & A
   
@@ -466,13 +464,13 @@ grid.arrange(p,pp, nrow=1)
   
   * Edgar C. Merkle, Mark Steyvers (2013) Choosing a Strictly Proper Scoring Rule. *Decision Analysis* 10(4):292-304. 
   
-  * Gneiting T, Balabdaoui F, Raftery AE. 2007. Probabilistic forecasts, calibration and sharpness. *J. R. Stat. Soc. B* 67:243â€?68
+  * Gneiting T, Balabdaoui F, Raftery AE. 2007. Probabilistic forecasts, calibration and sharpness. *J. R. Stat. Soc. B* 67:243-68
   
-  * Gneiting, T., & Katzfuss, M. (2014). Probabilistic forecasting. *Annual Review of Statistics and Its Application*, 1(1), 125â€?151.
+  * Gneiting, T., & Katzfuss, M. (2014). Probabilistic forecasting. *Annual Review of Statistics and Its Application*, 1(1), 125-151.
   
-  * Gneiting T, Raftery AE. 2007. Strictly proper scoring rules, prediction, and estimation. *J. Am. Stat. Assoc.* 102:359â€?78
+  * Gneiting T, Raftery AE. 2007. Strictly proper scoring rules, prediction, and estimation. *J. Am. Stat. Assoc.* 102:359???78
   
-  * Hersbach, H. (2000), â€œDecomposition of the Continuous Ranked Probability Score for Ensemble Prediction Systems,â€? *Weather and Forecasting*, 15,559â€?570.
+  * Hersbach, H. (2000), â€œDecomposition of the Continuous Ranked Probability Score for Ensemble Prediction Systems,??? *Weather and Forecasting*, 15,559-570.
   
   * Hyndman, R. J. (2018). forecast: Forecasting functions for time series and linear models (R package version 8.3). https://CRAN.R-project.org/package=forecast
   
@@ -487,10 +485,9 @@ grid.arrange(p,pp, nrow=1)
   
    * Lowe, Rachel ; Coelho, Caio As ; Barcellos, Christovam ; Carvalho, Marilia SÃ¡ ; CatÃ£o, Rafael De Castro ; Coelho, Giovanini E ; Ramalho, Walter Massa ; Bailey, Trevor C ; Stephenson, David B ; RodÃ³, Xavier eLife, 2016, *Peer Reviewed Journal* Vol.5 
   
-  * Matheson, J. E., and Winkler, R. L. (1976), â€œScoring Rules for Continuous Probability Distributions,â€? *Management Science*, 22, 1087â€?1096.
+  * Matheson, J. E., and Winkler, R. L. (1976), â€œScoring Rules for Continuous Probability Distributions,??? *Management Science*, 22, 1087-1096.
   
-  * Raftery, A. E. (2016). Use and communication of probabilistic forecasts. *Statistical Analysis and Data Mining: The ASA Data Science Journal*, 9(6), 397â€?410.
+  * Raftery, A. E. (2016). Use and communication of probabilistic forecasts. *Statistical Analysis and Data Mining: The ASA Data Science Journal*, 9(6), 397-410.
   
-  * Roulston, M. S., and Smith, L. A. (2002), â€œEvaluating Probabilistic Forecasts Using Information Theory,â€? *Monthly Weather Review*, 130, 1653â€?1660.
-
+  * Roulston, M. S., and Smith, L. A. (2002), â€œEvaluating Probabilistic Forecasts Using Information Theory,??? *Monthly Weather Review*, 130, 1653-1660.
 
