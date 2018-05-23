@@ -3,8 +3,8 @@ title: |
  | \fontsize{18}{15}\sf\bfseries{What makes a good prediction interval or probabilistic forecast?}
  
 author: 
-- Professor Rob Hydnman
-- Beinan Xu
+- Beinan Xu \newline
+- (supervisor:Professor Rob Hyndman)
 date: "`r format(Sys.time(), '%d %B %Y')`"
 fontsize: 14pt
 output:
@@ -26,7 +26,7 @@ library(scoringRules)
 library(lubridate)
 library(fGarch)
 library(Mcomp)
-
+library(gridExtra)
 
 store_fc_results <- function(u, method)
 {
@@ -50,16 +50,67 @@ PIS<-function(y,l,u,a)
 
 # Introduction
 
+## Scoring Rules
+* Interval scores
+* Distribution scores
+
+## Case study
+There are two case studies
+* ASX 200
+* M3 datasets
+
 # Scoring Rules
+
+* Introdution
+    + Concept
+    + Functions
+
 
 # Interval forecast
 
+Winkler loss scoring rule is selected to evaluate interval forecasts.
+
+* Introduction
+* Reasons for choosing it
+
+##Winkler loss scoring rules
+\small
+$$
+  S_\alpha^{int}(l,u;x)=(u-l)+\frac{2}{\alpha}(l-x)1\{x<l\}+\frac{2}{\alpha}(x-u)1\{x>u\}
+$$
+
 # Probabilistic forecast
 
+Three scoring are chosen to evaluate probabilistic forecasts
 
-# case study one: ASX200
+## Logarithmic score
+  $$
+      LogS(F,y)=logF(y)
+  $$
 
-# Evaluating by interval forecast 
+
+## Continuous Ranked Probability Score
+ $$
+       CRPS(F,y)=\int_{-\infty}^{\infty}(F(x)-1\left\{y\leq{x}\right\})^2 dx
+ $$
+
+## Dawid-Sebastianti score
+ \small
+  $$
+     DSS(F,y)=\frac{(y-\mu_F)^2}{\sigma_F^2}+2log\sigma_F
+  $$
+
+# Case study one: ASX200
+
+* Data information
+     + Introduction
+     + Feature
+  
+
+# Evaluating by interval score 
+
+* Models selection
+* Evaluation results
 
 # ARIMA model select
 ```{r asxdata, include=FALSE}
@@ -71,7 +122,12 @@ dftrain <- window(dfasx, end = 2800)
 dftest <- window(dfasx, start = 2801)
 dffit.arima <- auto.arima(dftrain,stepwise = F)
 ```
-##Auto.arima
+
+## Finding method
+
+* auto.arima
+     + How to work
+     + AIC 
 
 # GARCH model select
 ```{r garch, include=FALSE, dependson="arima"}
@@ -92,8 +148,12 @@ garch2_results@fit$ics -> arch2
 garch <- rbind(garch11, garch12, garch21, garch22, arch1, arch2)
 ```
 
-## plot for ARIMA model
 
+```{r table1,message=FALSE, dependson="garch"}
+knitr::kable(round(garch, 3), caption = "Garch model select", booktabs = TRUE) 
+```
+
+# Evaluating interval forecasts for two models
 
 ```{r r Infasx, include=FALSE}
 ## arima 
@@ -116,12 +176,14 @@ colnames(ASX_PIS.arima)="Interval scores"
 rownames(ASX_PIS.arima)<-dffc.arima$level
 ```
 
-```{R plot1, message=FALSE}
+```{R plot1, include=FALSE}
 data.frame(level=dffc.arima$level, PIS=ASX_PIS.arima[,1]) %>%
   ggplot(aes(x=level, y=PIS)) +
   geom_point() + geom_line()+
-  ggtitle("Interval scores for ARIMA model at different confident level")
+  ggtitle("Interval scores for ARIMA model at different prediction level")->AA
 ```
+
+
 ```{R garchPIS, include=FALSE}
 ## garch
 garch_results <- garchFit(~ arma(0, 3) + garch(1, 1), data = dftrain, trace = FALSE)
@@ -142,21 +204,22 @@ rownames(ASX_PIS.garch)<-dffc.arima$level
 ```
 
 
-
-# Evaluating by interval forecast 
-##plot for GARCH model
-```{R plot2, message=FALSE}
+```{R plot2, include=FALSE}
 data.frame(level=dffc.arima$level, PIS=ASX_PIS.garch[,1]) %>%
   ggplot(aes(x=level, y=PIS)) +
   geom_point() + geom_line() +
-  ggtitle("Interval scores for Garch model at different confident level")
+  ggtitle("Interval scores for Garch model at different prediction level")->GG
 ```
 
 
+```{R plot3, message=FALSE}
+grid.arrange(AA,GG, nrow=1)
+```
 
 # Evaluating by interval forecast 
-## comparing two models
-```{r plot3,message=FALSE}
+
+## Comparing two models
+```{r plot4,message=FALSE}
 data.frame(ARIMA=ASX_PIS.arima[,1],
            GARCH=ASX_PIS.garch[,1],level=dffc.arima$level)%>%
   ggplot(aes(x=level,y=PIS))+
@@ -167,12 +230,58 @@ data.frame(ARIMA=ASX_PIS.arima[,1],
  
 ```
 
+# Evaluation of probablisitic forecasts
+
+```{r arima, include=FALSE}
+
+# arima
+dffit.arima <- auto.arima(dftrain,stepwise = F)
+dffc.arima <- forecast(dffit.arima, h = length(dftest))
+dffcmean.arima <- as.numeric(dffc.arima$mean)
+dffcsd.arima <- as.numeric((dffc.arima$upper[, 2] - dffc.arima$lower[, 2]) / 2 / 1.96)
+
+dfcrps <- crps(as.numeric(dftest), family = "normal", mean = dffcmean.arima, sd = dffcsd.arima) %>% mean() %>% round(digits = 5)
+dflogs <- logs_norm(as.numeric(dftest), mean = dffcmean.arima, sd = dffcsd.arima) %>% mean() %>% round(digits = 5)
+dfdss <- dss_norm(as.numeric(dftest), mean = dffcmean.arima, sd = dffcsd.arima) %>% mean() %>% round(digits = 5)
+
+ARIMA <- c(dfcrps, dflogs, dfdss)
+```
 
 
-# case study two: M3 data set
+
+```{r garchfit, include=FALSE, dependson="arima"}
+# garch
+garch_results <- garchFit(~ arma(0, 3) + garch(1, 1), data = dftrain, trace = FALSE)
+garch_results
+fc.garch <- predict(garch_results, n.ahead = length(dftest), crit_val = 0.95)
+
+fcmean.garch <- as.numeric(fc.garch$meanForecast)
+fcsd.garch <- as.numeric(fc.garch$standardDeviation)
+
+crps <- crps(as.numeric(dftest), family = "normal", mean = fcmean.garch, sd = fcsd.garch) %>% mean() %>% round(digits = 5)
+logs <- logs_norm(as.numeric(dftest), mean = fcmean.garch, sd = fcsd.garch) %>% mean() %>% round(digits = 5)
+dss <- dss_norm(as.numeric(dftest), mean = fcmean.garch, sd = fcsd.garch) %>% mean() %>% round(digits = 5)
+
+GARCH <- c(crps, logs, dss)
+```
+```{r table2,message=FALSE, dependson="garchfit"}
+ASX <- round(rbind(GARCH, ARIMA),2)
+colnames(ASX) <- c("CRPS","LogS","DSS")
+rownames(ASX) <- c("GARCH","ARIMA")
+  knitr::kable(ASX, caption = "Scoring Rules for MA model and GARCH model", booktabs = TRUE)
+```
+
+# Case study two: M3 data set
+
+* The information of M3 dataset
+
 
 # Evaluating by interval forecast
-# Plot 
+
+* Models selection
+* Standardization for data
+
+# Evaluating interval scores
 ```{r M3PIS,include=FALSE}
 
 store_ifc_results <- function(u, method)
@@ -220,7 +329,7 @@ PIS_scores
 M3ilong<-gather(PIS_scores, -id, -type, -period, -model, key=ScoringMethod, value=Score)
 ```
 
-```{r boxplotPIS,message=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="M3"}
+```{r boxplotPIS,include=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="M3"}
 # Produce some boxplots
 M3ilong %>%
   mutate(
@@ -234,16 +343,21 @@ M3ilong %>%
     xlab("Forecasting method") +
     ggtitle("Scores for the M3 data") -> I
 I
+II<-I+scale_y_log10()
 ```
 
-# plot for log
-```{r boxplotlogPIS,message=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="boxplot"}
+
+```{r boxplotlogPIS,message=FALSE}
 # Produce some boxplots on log scale
-I + scale_y_log10()
+grid.arrange(I,II, nrow=1)
 ```
 
 # Evaluating by probilistic forecasts
-#plot
+
+* Models selection
+* Standardization for data
+
+# Evaluating distribution scores
 ```{r M3,include=FALSE}
 # Work on subset of data?
 #k <- sample(3003, size=100)
@@ -307,7 +421,7 @@ M3long <- gather(M3_scores, -id, -type, -period, -model, key=ScoringMethod, valu
 
 ```
 
-```{r boxplot,message=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="M3"}
+```{r boxplot,include=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="M3"}
 # Produce some boxplots
 M3long %>%
   mutate(
@@ -321,17 +435,19 @@ M3long %>%
     xlab("Forecasting method") +
     ggtitle("Scores for the M3 data") -> p
 p
+pp<-p + scale_y_log10()
 ```
 
-#plot for log
 
-```{r boxplotlog,message=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="boxplot"}
+```{r boxplotlog,message=FALSE}
 # Produce some boxplots on log scale
-p + scale_y_log10()
+grid.arrange(p,pp, nrow=1)
 ```
 
 # conclusion
 
+* Conclusion
+* Further discussion
 
 #  Q & A
   
@@ -350,13 +466,13 @@ p + scale_y_log10()
   
   * Edgar C. Merkle, Mark Steyvers (2013) Choosing a Strictly Proper Scoring Rule. *Decision Analysis* 10(4):292-304. 
   
-  * Gneiting T, Balabdaoui F, Raftery AE. 2007. Probabilistic forecasts, calibration and sharpness. *J. R. Stat. Soc. B* 67:243â€“68
+  * Gneiting T, Balabdaoui F, Raftery AE. 2007. Probabilistic forecasts, calibration and sharpness. *J. R. Stat. Soc. B* 67:243â€?68
   
-  * Gneiting, T., & Katzfuss, M. (2014). Probabilistic forecasting. *Annual Review of Statistics and Its Application*, 1(1), 125â€“151.
+  * Gneiting, T., & Katzfuss, M. (2014). Probabilistic forecasting. *Annual Review of Statistics and Its Application*, 1(1), 125â€?151.
   
-  * Gneiting T, Raftery AE. 2007. Strictly proper scoring rules, prediction, and estimation. *J. Am. Stat. Assoc.* 102:359â€“78
+  * Gneiting T, Raftery AE. 2007. Strictly proper scoring rules, prediction, and estimation. *J. Am. Stat. Assoc.* 102:359â€?78
   
-  * Hersbach, H. (2000), â€œDecomposition of the Continuous Ranked Probability Score for Ensemble Prediction Systems,â€ *Weather and Forecasting*, 15,559â€“570.
+  * Hersbach, H. (2000), â€œDecomposition of the Continuous Ranked Probability Score for Ensemble Prediction Systems,â€? *Weather and Forecasting*, 15,559â€?570.
   
   * Hyndman, R. J. (2018). forecast: Forecasting functions for time series and linear models (R package version 8.3). https://CRAN.R-project.org/package=forecast
   
@@ -371,10 +487,10 @@ p + scale_y_log10()
   
    * Lowe, Rachel ; Coelho, Caio As ; Barcellos, Christovam ; Carvalho, Marilia SÃ¡ ; CatÃ£o, Rafael De Castro ; Coelho, Giovanini E ; Ramalho, Walter Massa ; Bailey, Trevor C ; Stephenson, David B ; RodÃ³, Xavier eLife, 2016, *Peer Reviewed Journal* Vol.5 
   
-  * Matheson, J. E., and Winkler, R. L. (1976), â€œScoring Rules for Continuous Probability Distributions,â€ *Management Science*, 22, 1087â€“1096.
+  * Matheson, J. E., and Winkler, R. L. (1976), â€œScoring Rules for Continuous Probability Distributions,â€? *Management Science*, 22, 1087â€?1096.
   
-  * Raftery, A. E. (2016). Use and communication of probabilistic forecasts. *Statistical Analysis and Data Mining: The ASA Data Science Journal*, 9(6), 397â€“410.
+  * Raftery, A. E. (2016). Use and communication of probabilistic forecasts. *Statistical Analysis and Data Mining: The ASA Data Science Journal*, 9(6), 397â€?410.
   
-  * Roulston, M. S., and Smith, L. A. (2002), â€œEvaluating Probabilistic Forecasts Using Information Theory,â€ *Monthly Weather Review*, 130, 1653â€“1660.
+  * Roulston, M. S., and Smith, L. A. (2002), â€œEvaluating Probabilistic Forecasts Using Information Theory,â€? *Monthly Weather Review*, 130, 1653â€?1660.
 
 
