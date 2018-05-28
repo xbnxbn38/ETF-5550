@@ -99,7 +99,7 @@ Winkler loss scoring rule is selected to evaluate interval forecasts.
 
 \small
 
-* A probabilistic forecast takes the form of a predictive probability distribution over future quantities or events of interest. Probabilistic forecasting aims to maximize the sharpness of the predictive distributions, subject to calibra tion, on the basis of the available information set. (Gneiting and Katzfuss, 2014)
+* A probabilistic forecast takes the form of a predictive probability distribution over future quantities or events of interest. Probabilistic forecasting aims to maximize the sharpness of the predictive distributions, subject to calibration, on the basis of the available information set. (Gneiting and Katzfuss, 2014)
 
 # Distribution scoring rules 
 
@@ -138,7 +138,7 @@ Three scoring are chosen to evaluate probabilistic forecasts under Gaussian pred
 
 \small
 
-This model has become important in the analysis of time series data, particularly in financial applications when the goal is to analyze and forecast volatility.
+* This model has become important in the analysis of time series data, particularly in financial applications when the goal is to analyze and forecast volatility.
 
 
 # Model selection
@@ -155,7 +155,7 @@ This model has become important in the analysis of time series data, particularl
 
 \small
 
-* The results after evaluating forecast results by using scoring rules
+* The forecasts from a random walk model are equal to the last observation, as future movements are unpredictable, and are equally likely to be up or down.
 
 * Random walk models are widely used for non-stationary data. 
 
@@ -175,7 +175,7 @@ have a constant unconditional mean
      + Probabilistic forecasts
 
 
-# Evaluating by interval score 
+# Evaluating for interval score 
 
 * Models selection
 * Evaluation results
@@ -293,7 +293,7 @@ data.frame(ARIMA=ASX_PIS.arima[,1],
  
 ```
 
-# Evaluation of probablisitic forecasts
+# Evaluation of probabilisitic forecasts
 
 * Same models 
 
@@ -347,14 +347,14 @@ rownames(ASX) <- c("GARCH","ARIMA")
 * The M3 dataset includes 3003 different type time series, it is from R packages “Mcomp” (Hyndman, 2018).
 
 
-# Evaluating by interval forecast
+# Evaluating for interval forecast
 
 * Models selection
     + ARIMA and ETS
     
 * Standardization 
-    + Randon wolk model
-    + CRPS scoring rules
+    + Random walk model
+    + Winkler loss scoring rule
 
 # Evaluating interval scores
 ```{r M3PIS,include=FALSE}
@@ -426,13 +426,13 @@ I + scale_y_log10()
 ```
 
 
-# Evaluating by probilistic forecasts
+# Evaluating for probabilistic forecasts
 
 * Models selection
     + ARIMA and ETS
     
 * Standardization 
-    + Randon wolk model
+    + Random walk model
     + CRPS scoring rules
     
 # Evaluating distribution scores
@@ -523,6 +523,7 @@ p + scale_y_log10()
 
 
 # conclusion
+
 
 * Conclusion
 
