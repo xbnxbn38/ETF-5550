@@ -1,20 +1,26 @@
 # Case study two: M3 datasets 
 
-The M3 dataset includes 3003 different type time series, it is from R packages "Mcomp" (@RH182), it can provide more information for evaluating probabilistic forecast by using scoring rule. For each time series, there are a train set and a test set, which can be easily used to build each forecast models, then predicting and scoring. Different from previous financial data, M3 datasets can use different models for predictive analysis at the same time. In this part, three prediction models are chosen, ARIMA model, ETS model, and Random walk model.
+The M3 dataset includes 3003 different type time series, it is from R packages "Mcomp" (@RH182). These time series are from different fields, so their data units are different. Base on the time type, they can be divided into three large classes, yearly data monthly data and quarterly data. For each time series, there are a train set and a test set, which can be easily used to build each forecast models, then predicting and scoring. Different from previous financial data, M3 datasets can use different models for predictive analysis at the same time. Therefore, it can provide more information for evaluating forecasts by using scoring rule. 
 
-As in the previous chapter, before we start forecasting and evaluating, the suitable models should be selected. However, for the M3 datasets, there are more than 3000 different time series, so we have modeled all the time series separately by these three models. 
+As in the previous chapter, before we start forecasting and evaluating, the suitable models should be selected. In this case study, three prediction models are chosen, ARIMA model, ETS model, and Random walk model. However, for the M3 datasets, there are more than 3000 different time series, so we have modeled all the time series separately by using these three models. 
 
+Before the analysis of the M3 dataset, there is a problem that needs to be noticed. These different time sequences come from different fields and their units are different. As we discussed in the second chapter, it is necessary to standardize each scoring result by using Winkler loss scoring rule and continuous ranked probability Scoring rule. If data are not standardized, the final result will be the mistake. 
 
-Before the analysis of the M3 dataset, there is a problem that needs to be noticed. These different time sequences come from different fields and their units are different. It is necessary to standardize each data for evaluating the value of their prediction results. If data are not standardized, the final result will be the mistake. In case study two, four scoring rules will be used, and the interval score and CRPS score need to be standardized, while DSS and LogS. It will be discussed in detail later.
+## Model selection
+
+As in the previous chapter, before we start forecasting and evaluating, the suitable models should be selected. In this case study, three prediction models are chosen, ARIMA model, ETS model, and Random walk model. However, for the M3 datasets, there are more than 3000 different time series, so we have modeled all the time series separately by using these three models. The three models can be selected by the automatic program, which are introduced in the third chapter. Then they can be used for interval prediction or probability prediction. So there is no more detailed discussion here.
+
 
 ## Interval forecast for the M3 competition data 
 
-Like the case study one, we first make interval forecasts for every times series from M3 datasets by using three different model, ARIMA model, ETS model and random walk model. Meanwhile, in order to eliminate the impact of units from each time series, the interval forecasts by using average method are also produced.  
+Like case study one, firstly, we need to use the optimality model selected by automatic programs to predict interval for all time series from M3 datasets. Then use Winkler loss scoring rule to score each prediction result. The difference is that we no longer need to observe the impact of the different prediction interval level on the interval prediction results, so we did not set different predictive interval levels. Instead, all of the interval forecasts are under the 95% prediction interval. Each scoring results for every time series by evaluating forecasts, we also take their mean as the final result.
 
-Since there are more than 3000 time series, it is inefficient to find four different models for each time sequence, and use the unified automatic program codes from R package "forecasts" by @RH181 to choose the models. Use the train set of each time series to find the most suitable model, and calculate the interval score through the forecasts results and test sets. After that, each interval score from all time series by ARIMA model, ETS model, and Random walk model is divided into the result of the average method to standardize and remove the influence of different units. 
+It should be noted that after getting the interval score, we need to use the scores by assessing the forecasts of random walk model to standardize the results from ARIMA and ETS model, to remove the impact of units from different time series. 
 
+$$Standardized~interval~score=\frac{Interval~scores~for~ARIMA~model~or~ETS~model}{Interval~scores~for~RW~model}$$
 
-The interval score we use here is the same as the third chapter, using the YY scoring rule.
+Then use the standardized scores to produce graph to compare the results. Here we use box plot, which an intuitively identify outliers in data sets and determine the degree of dispersion and bias in data sets. Also, use the different box plot to compare the scoring results from time series under different time types. Then the box plot are generated.
+
 
 ```{r M3PIS,include=FALSE}
 
@@ -47,21 +53,20 @@ etsifc <- map(M3[q], store_ifc_results,
 arimaifc <- map(M3[q], store_ifc_results,
                method=function(x, h, level){forecast(auto.arima(x), h=h, level=level)})
 
-#Eliminating the impact of data units in the model, I create new PIS by mean forecast
-
-meanfc<-map(M3[q], store_ifc_results, method=meanf)
-mean_PIS<-map_dbl(meanfc, calc_PIS, scorefn=PIS)
+#Eliminating the impact of data units in the model, I create new PIS by naive forecast
+RWFI = map_dbl(rwifc, calc_PIS, scorefn=PIS)
 
 PIS_scores <- mutate(M3_PIS,
-                      RWF = map_dbl(rwifc, calc_PIS, scorefn=PIS)/mean_PIS,
-                      ETS = map_dbl(etsifc, calc_PIS, scorefn=PIS)/mean_PIS,
-                      ARIMA = map_dbl(arimaifc, calc_PIS, scorefn=PIS)/mean_PIS
+                      ETS = map_dbl(etsifc, calc_PIS, scorefn=PIS)/RWFI,
+                      ARIMA = map_dbl(arimaifc, calc_PIS, scorefn=PIS)/RWFI
 ) %>%
   gather(-id, -type, -period, value=PIS, key=model)
 
 PIS_scores
 M3ilong<-gather(PIS_scores, -id, -type, -period, -model, key=ScoringMethod, value=Score)
 ```
+
+
 
 ```{r boxplotPIS,message=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="M3"}
 # Produce some boxplots
@@ -75,22 +80,30 @@ M3ilong %>%
     facet_grid(ScoringMethod ~ period, scales="free") +
     guides(fill=FALSE) +
     xlab("Forecasting method") +
-    ggtitle("Scores for the M3 data") -> I
+    ggtitle("Interval scores for the M3 data") -> I
 I
 ```
+
+According to the whole box plots, we can not see clearly which model has better interval prediction results. However, it can be seen that quite a number of outliers are displayed over 95th percentile line. This shows that comparing the standard normal distribution, the score distribution shows that the tail is too heavy, and the degree of freedom is small. Because the outliers are concentrated on one side of the larger value, the distribution appears right-biased. The reason for this result is that the scores based on Winkler loss scoring rule formula are always greater than or equal to the difference of upper and lower endpoints. ALsoThe scores of the ETS model are lower than those of the ARIMA model at 5th, 25th, 50th, 75th and 95th percentiles, whether they are from monthly data or quarterly data for yearly data.
+
+In order to observe the results more clearly, we produce the box plots on the log scale.
 
 ```{r boxplotlogPIS,message=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="boxplot"}
 # Produce some boxplots on log scale
 I + scale_y_log10()
 ```
 
+This is the result boxplot of interval scores on the log scale. The boxplots can show 5th, 25th, 50th, 75th and 95th percentiles of central prediction interval width. And for the yearly and quarterly time series the interval scores are similar by different model, only the line at the 50th percentile for ETS model shows a bit lower than that for ARIMA model. So we consider that ETS model has better prediction proformance to make interval forecasts for the yearly and quarterly time series. For monthly data, the score results show a great difference. The line at 25th percentile of ETS model is clearly lower than that of ARIMA model. And the distance between the upper and lower limits of ETS model is obviously greater than ARIMA. This shows that for the monthly time series ETS score has great volatility and is not very concentrated, so the prediction result of ETS model is not as good as ARIMA model. The forecasts by ARIMA model have sharper sharpness and the calibration is more accurate, 
+
 ## Probabilistic forecasts for the M3 competition data
 
-In this part, three prediction models (ARIMA model, ETS model, and Random walk model) still be used as before. After separately predicting these 3003 different time series, we reached 9009 forecast sets. Then each of these forecasting sets is evaluated by three different scoring rules separately. And to average the evaluation results for each different time series. Use these evaluation results to generate three boxplots, they represent the performance of different models to predict under different scoring rules.
+In this part, we make the probabilistic forecasts of each time series by using the same time series models as before. However, the scoring rules will use the distribution scoring rules. It is important to note that, as previously discussed in the second chapter, although the logarithmic score and Dawid-Sebastianti score will be directly transfrom the data so that the results should not standardized. But, when the continuous ranked probability score is used, the scoring results need to be standardized. The standardization method is the same as the method to deal with the interval prediction.
 
-Because of the data should be standardized for CRPS scoring rules, so we use the z-scores standardization to transform the data form M3 data sets. And the LogS and DSS scoring are already transformed, so we should not standards the data. 
+$$Standardized~CRPS~score=\frac{CRPS~scores~for~ARIMA~model~or~ETS~model}{CRPS~scores~for~RW~model}$$
 
-```{r M3,include=FALSE}
+
+
+```{r M3DF,include=FALSE}
 # Work on subset of data?
 #k <- sample(3003, size=100)
 k <- seq(3003)
@@ -112,30 +125,26 @@ arimafc <- map(M3[k], store_fc_results,
 
 #Eliminating the impact of data units in the model for CRPS
 
-calc_crps <- function(x, scorefn)
-{
-  scores = (scorefn(y=x[,"actual"], mean=x[,"mean"], sd=x[,"sd"]))/x[,"sd"]
-  return(mean(scores))
-}
+
+RWFD = map_dbl(rwfc, calc_scores, scorefn=crps_norm)
 
 #crps
 crps_scores <- mutate(M3_scores,
-                      RWF = map_dbl(rwfc, calc_crps, scorefn=crps_norm),
-                      ETS = map_dbl(etsfc, calc_crps, scorefn=crps_norm),
-                      ARIMA = map_dbl(arimafc, calc_crps, scorefn=crps_norm)
+                      ETS = map_dbl(etsfc, calc_scores, scorefn=crps_norm)/RWFD,
+                      ARIMA = map_dbl(arimafc, calc_scores, scorefn=crps_norm)/RWFD
 ) %>%
   gather(-id, -type, -period, value=CRPS, key=model)
 
 #logs
 log_scores <- mutate(M3_scores,
-                     RWF = map_dbl(rwfc, calc_scores, scorefn=logs_norm),
+                     #RWF = map_dbl(rwfc, calc_scores, scorefn=logs_norm),
                      ETS = map_dbl(etsfc, calc_scores, scorefn=logs_norm),
                      ARIMA = map_dbl(arimafc, calc_scores, scorefn=logs_norm)
 ) %>%
   gather(-id, -type, -period, value=LOGS, key=model)
 #dss
 dss_scores<-mutate(M3_scores,
-                   RWF = map_dbl(rwfc, calc_scores, scorefn=dss_norm),
+                   #RWF = map_dbl(rwfc, calc_scores, scorefn=dss_norm),
                    ETS = map_dbl(etsfc, calc_scores, scorefn=dss_norm),
                    ARIMA = map_dbl(arimafc, calc_scores, scorefn=dss_norm)
 ) %>%
@@ -153,6 +162,12 @@ M3long <- gather(M3_scores, -id, -type, -period, -model, key=ScoringMethod, valu
 
 ```
 
+
+
+After the probabilistic forecasts from each time series has been scored by three distribution scoring rules, and the scores has been taken the average, we get the final scoring results. Certainly, the results by using the CRPS scoring rules should be standardized. Using the same way of the interval score, we get the box plot with different scoring rules under different time types. The original image is shown next page.
+
+
+
 ```{r boxplot,message=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="M3"}
 # Produce some boxplots
 M3long %>%
@@ -165,17 +180,25 @@ M3long %>%
     facet_grid(ScoringMethod ~ period, scales="free") +
     guides(fill=FALSE) +
     xlab("Forecasting method") +
-    ggtitle("Scores for the M3 data") -> p
+    ggtitle("Distribution scores for the M3 data") -> p
 p
 ```
 
+
+According to the information of these box plots, we are hard to distinguish which model is better for making probabilistic forecasting under different time types of time series. But these plots are still clearly display that the most outliers are concentrated over the 95th percentile. This shows that the tail of the score distribution is heavy and the distribution is right-skewed.
+
+In order to display the results more clearly, we have also processed this figure, to produce the boxplots on log scale.
 
 ```{r boxplotlog,message=FALSE,fig.height=10,fig.width=10, out.width="100%", dependson="boxplot"}
 # Produce some boxplots on log scale
 p + scale_y_log10()
 ```
 
-Although it cannot be known from the above figure how many outliers are generated base on the different forecast model by different scoring rules, boxplots can show 5th, 25th, 50th, 75th and 95th percentiles of central prediction interval width. The width of the obvious random walk model is much narrower than that of other models, which means that its sharpness is sharpest, and the calibration is more accurate, although its mean value is not the lowest. Therefore, in the case of using M3 data sets, the quality of probability predictions derived from random walk model is even higher. This also proves that using scoring rules can simultaneously evaluate the sharpness and calibration of probabilistic results.
+According to this graphs, where CRPS scoring rules are used, the prediction scores for all time types of time series show that the ETS model has better prediction sharpness, because the distance between his upper and lower limits, and distance of the 25th percentile and 75th percentile lines are all small than the distances of the ARIMA model. Although the median lines from this two model are almost equal, we still think ETS models have better predictive performance by using CRPS scoring rules.
+
+For score results by using LogS and DSS scoring rules, although the differences shown in the box plots are not particularly large, we can still see that the score distribution of the ETS model is more concentrated. It indicates that the sharpness of probabilistic prediction of ETS model is more sharp. Therefore, the score results by using LogS and DSS scoring rules also show that ETS models have better probabilistic predictive performance for the time series from M3 datasets.
+
+
 
 
 

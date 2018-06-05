@@ -1,3 +1,12 @@
-# Conclusion
+# Conclusion and future discussion
 
-In this report, we introduced what is the probabilistic forecasts, and calibration and sharpness. It also introduced scoring rules. For the three commonly used scoring rules, we show their original formulas and form under Gaussian predictive distribution. In the section of the case study, we first used two models to do probabilistic forecasts for the ASX200 index, to evaluate the forecasts results by using scoring rules. Then we learned how to use scoring rules to evaluate the outcome of forecasts. In the second case study, we used the M3 datasets and used multiple models to do probabilistic forecasts. We learned how the scoring rules evaluated both the probabilities and the results of car calibration and sharpness.
+## Conclusion
+
+As a common means to evaluate interval prediction and probability prediction, scoring rules are widely used. The score of the prediction is scored by evaluating the sharpness of the prediction result and the calibration. This article presents two different types of scores, interval scores and distribution scores. And detailed introduction of four different scoring rules, Winkler loss score, Logarithmic score, Continuous Ranked Probability Score and Dawid-Sebastianti score. In the case study, the different time series models are used to make interval prediction and probabilistic prediction for different types of time series data. After scoring all the prediction results using the corresponding evaluation rules, the score results are compared and evaluated separately.
+
+For financial data, because of its characteristics, the GARCH model can more accurately analyze and predict the financial time series, which has the phenomenon of volatility clusters. Therefore, the GARCH model has good performance both in interval prediction and probabilistic prediction. Of course, the prediction effect of the GARCH model is not very ideal under the high prediction interval level. For other types of time series data, different models have different predictive performance. In the case study, the higher-quality interval predictions can be given by ARIMA model, while ETS models perform better in probabilistic predictions. But no matter what kind of model you use to make predictions, using appropriate scoring rules can intuitively evaluate the interval or probabilistic prediction results.
+
+
+## Future discussion
+
+For probabilistic prediction and interval prediction, univariate time series are mainly used for analysis and prediction. However, in many cases, the development of an event is not only influenced by its own changes, but other events also affect the observed events. Therefore, it is important to study the multivariate time series model and use this model to make interval and probability prediction. At the same time, we need to study new scoring rules for this situation to evaluate the accuracy of the prediction.

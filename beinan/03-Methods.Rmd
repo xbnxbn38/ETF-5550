@@ -1,26 +1,75 @@
-# Method
+# Time series models
 
-## Model select
+Time series models are used to analyze and predict time series data. And different time series models are applicable to different types of time series, such as the generalized autoregressive conditional heteroskedasticity  model is widely used to analyze and forecast volatility in the financial time series. In this thesis, four commonly used time series models are selected to use in both case study, autoregressive integrated moving average model (ARIMA), generalized autoregressive conditional heteroskedasticity model (GARCH),  exponential smoothing model (ETS) and random walk model (RW). The four models have different characteristics, and the ways of selection are different. According to their characteristics, ARIMA and GARCH model are used in case study one, to fit the financial data. In case two, we use ARIMA and ETS model.  And the RW model is selected to remove the units effect to standardize the results by using some scoring rules, because the datasets in case two have over 3000 time series from different fields.
 
-Before studying the scoring rules, it is necessary to use the appropriate model to process the data and get the predicted results separately. In this article, four models are used, ARIMA, GARCH, ETS and Random walk. And ARIMA and GARCH is used for financial data in case study one, and ARIMA, ETS and Random walk in case study two.
+##  Autoregressive integrated moving average model
 
-### ARIMA model
+Autoregressive integrated moving average model aims to describe the autocorrelations in the data. The non-stationary ARIMA model is obtained by combine differencing with autoregression and a moving average model. The full model of ARIMA(p,d,q) model is written as 
 
-For the selection of the suitable ARIMA model, the traditional method is to observe the images of ACF and PACF of data to set the lags of the model to get the corresponding model. After testing whether the residuals look like white noise and comparing the AIC or the BIC of all the models (AIC is used in this artcle), choose the model with the smallest AIC to be the most suitable model. In order to simplify and accurately search for suitable ARIMA models, the "auto.arima" code (from R package "forecast" by @RH181) is be used in both case studies.
+$$y_t'=c+\phi_1y_{t-1}'+\cdots+\phi_py_{t-p}'+\theta_1\varepsilon_{t-1}+\cdots+\theta_q\varepsilon_{t-q}+\varepsilon_t$$
+where $y_t'$ is the differented series, p is the order of the autoregressive part, d is the degree of first differencing involved and q is the order of the moving average part.
 
-Akaike’s Information Criterion (AIC) is commonly used to select the order of ARIMA model.
+After using the backshift notation, Non-seasonal ARIMA models can be rewritten as below. This formula is much easier to use.
+$$(1-\phi_1B-\cdots-\phi_pB^p)(1-B)^dy_t=c+(1+\theta_1B+\cdots+\theta_qB^q)\varepsilon_t$$
+where $y_t'=(1-B)^dy_t$ is the mean of $y_t'$.
+
+For seasonal data, seasonal ARIMA model can be used instead of non-seasonal ARIMA model for analysis and prediction. It includes a non-seasomal part and a seasonal part, it can be represented as $ARIMA(p,d,q)(P,D,Q)_m$, where $m=$number of observations per year, P is the order of the seasonal autoregressive part, D is the degree of seasonal first differencing involved and Q is the order of the seasonal moving average part. Seasonal ARIMA models in backshift notation as
+
+$$(1-\phi_1B-\cdots-\phi_pB^p)(1-\Phi_{1}B^{m}-\cdots-\Phi_{P}B^{mP})(1-B)^d(1-B^{m})^Dy_{t}$$
+$$=(1+\theta_1B+\cdots+\theta_qB^q)(1+\Theta_{1}B^{m}+\cdots+\Theta_{Q}B^{mQ})\varepsilon_{t}$$
+
+For the selection of the ARIMA model, the way is that, plot the ACF and PACF of the data (if necessary, difference the data until stationary) to determine the corresponding models. Then choose the model with the smallest AIC or AICc to be the most suitable model. After checking the residuals from this model by plotting the ACF of the residuals and doing a portmanteau test of the residuals, to see whether the residuals look like white noise. If yes, this model can be use, if not, we should find the model again. In this process, AIC or AICc play a very important roles. Akaike’s Information Criterion (AIC) was described by @A74, which useful in selecting predictors for regression. For ARIMA model the AIC is defined as
+
 $$AIC=-2log(L)+2(p+q+k+1)$$
 where L is the likelihood of the data, $k=1$ if $c\neq0$ and $k=0$ if $c=0$.
 
-Bayesian Information Criterion
-$$BIC=AIC+[log(T)-2](p+q+k+1)$$
-Good models are obtained by minimizing the AIC or BIC.
-### GARCH model
+Also, the corrected AIC can be written as
+$$AICc=AIC+\frac{2(p+q+k+1)(p+q+k+2)}{T-p-q-k-2}$$
 
-### ETS model
+In this article, we choose to use 'auto.arima' function to select model. This function is from R package "forecast" by @RH181. It uses a variation of the Hyndman-Khandakar algorithm (@RK08), which combines unit root tests, minimization of the AICc and MLE to obtain an ARIMA model. It can automatically complete the selection process as above. Using this function, we can get the suitable model quickly and accurately.
 
-### Random walk model
+## Generalized autoregressive conditional heteroskedasticity model
 
-## Scoring rule select
+GARCH model is an econometric model developed by @R86, it is impartant way to analyze and forecast the volatility of financial data. It is actually formed on the basis of ARCH by increasing the p order autoregressiveness considering the heteroscedasticity function, which can effectively fit the heteroscedasticity function with long-term memory. In this article, we selection the GARCH models with the ARIMA model by using auto.arima function in R. Although the process of selecting the GARCH model cannot be carried out automatically, we can estimate some alternative models by using the garchFit function (from r package "fGarch" by @WD17). Then choosing the model with minimum AIC is the most suitable model by comparing the results of the AIC.
 
-### 
+ARMA-GARCH Model can be written as
+$$y_t=\mu+\phi_1y_{t-1}+\cdots+\phi_py_{t-p}+\theta_1\varepsilon_{t-1}+\cdots+\theta_q\varepsilon_{t-q}+\varepsilon_t=\mu+\sum_{i=1}^p\phi_iy_{t-i}+\sum_{i=1}^q\theta_i\varepsilon_{t-i}+\varepsilon_t$$
+
+$$\sigma_t^2=\omega+\alpha_1\varepsilon_{t-1}^2+\cdots+\alpha_r\varepsilon_{t-r}^2+\beta_1\sigma_{t-1}^2+\cdots+\beta_s\sigma_{t-s}^2=\omega+\sum_{i=1}^r\alpha_i\varepsilon_{t-i}^2+\sum_{i=1}^s\beta_i\sigma_{t-i}^2$$
+where $\varepsilon_t\sim{N(0,\sigma_t^2)}$
+
+According the formula of GARCH model, it has some important features. First, the big $\alpha_{t-1}^2$ will follow a big $\alpha_t^2$, which will generate a well-known phenomenon of volatility clusters in financial time series. Secondly, compared with the ARCH model, the tail of the GARCH model is thicker than that of the normal distribution. The third GARCH model can describe the evolution of volatility through a simple parameter function.
+
+## Exponential smoothing model
+
+ETS model is a technique to make forecasts by using a weighted mean of past values, wherein more recent values are given higher weights. It was described by @B59, @H57 and @W60. The types of ETS models can be divided into two categories: a model with additive errors and one with multiplicative errors. And they can continue to be subdivided by trends and seasonality. Each ETS model can be defined by these three factors to obtain ETS(Error, Trend, Seasonal). The possibilities for each component are: Error $=\{A,M\}$, Trend $=\{N,A,A_d\}$ and Seasonal $=\{N,A,M\}$, where N is none, A is additive, $A_d$ is additive damped and M is multiplicative. 
+
+For example, according to the selecting rule as above, a ETS(A,A,A) model can be written as below. The one-step-ahead training errors are assumed as $\varepsilon_t=y_t-\ell_{t-1}-b_{t-1}-s_{t-m}\sim{NID(0,\sigma^2)}$.
+$$y_t=\ell_{t-1}+b_{t-1}+s_{t-m}+\varepsilon_t$$
+$$\ell_t=\ell_{t-1}+b_{t-1}+\alpha\varepsilon_t$$
+$$b_t=b_{t-1}+\beta\varepsilon_t$$
+$$s_t=s_{t-m}+\gamma\varepsilon_t$$
+
+Like 'aoto.arima', "forecast" package in R provides an automatic method ('ets') to select ETS model. Although 'ets' also chooses the most suitable model according to the AICc value, the formula is somewhat adjusted. For ETS model, the AIC is defined as
+$$AIC=-2log(L)+2k$$
+where L is the likelihood of the model and k is the total number of parameters and initial states that have been estimated (including the residual variance).
+
+And the AICc is be written as
+$$AICc=AIC+\frac{k(k+1)}{T-k-1}$$
+  
+Although the ETS model is widely used, it is important to note that all ETS models are non-stationary. So they cannot be used to analyze the predicted the stationary time series data, such as financial data. 
+  
+  
+## Random walk model
+
+In case study two, the M3 datasets contain the time series from different fields, so they have units are also different. In order to remove the effect of unit before we compare the scoring results by using different scoring rules, standardization of results is needed. The method is that we use the time series models to get the scoring results divided the results obtained by our chosen model, which is used for standardization. The model is random walk model, it also be called naive model, because of two main features of random walk, long periods of apparent trends up or down and sudden and unpredictable changes in direction. Select it because it has some important features, one is the forecasts from a random walk model are equal to the last observation. And it can widely used for non-stationary data. 
+
+$$y_t=y_{t-1}+\varepsilon_t$$
+where $\varepsilon_t$ denotes white noise.
+
+Similarly, the random walk model can also be modeled by an automatic program ('rwf' function from "forecast" package), and its modeling approach is more simple than the previous time series models, because there is no need to use information criteria as the the AIC to select the optimal model. The all forecasts to be the value of the last observation: $\hat{y_{T+h|T}=y_T}$ where h is the forecast horizon. 
+
+
+
+
+
