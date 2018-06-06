@@ -30,9 +30,9 @@
 \ProcessOptions
 
 \ifsingleside@%
-  \LoadClass[a4paper,oneside,openany,draft,11pt]{report}
+  \LoadClass[a4paper,oneside,openany,draft,12pt]{report}
 \else%
-  \LoadClass[a4paper,11pt,openright,twoside]{report}
+  \LoadClass[a4paper,12pt,openright,twoside]{report}
 \fi%
 
 %% Page dimensions
@@ -99,7 +99,7 @@
 
 %% SPACING
 \RequirePackage{setspace}
-\spacing{1.5}
+\spacing{2}
 
 %% LINE AND PAGE BREAKING
 \sloppy

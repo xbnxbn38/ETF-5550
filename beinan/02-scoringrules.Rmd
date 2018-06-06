@@ -1,12 +1,12 @@
 # Scoring rules
 
-The traditional prediction method is mainly based on point forecasts, which can provide forecasters with future development trend information under given predictive interval level. But the future is extremely uncertain. It's hard to predict an accurate future through the past information. For example, when watching a football match, if the level of the two teams is very different, we can easily judge that the team is more likely to win, but how many goals is hard to know. At this point, the limitations of point forecasts are reflected. The prediction should be probabilistic. The preditive interval or probabilistic forecasts can be given an interval or probability distribution for all possible future results so that more information can be obtained to predict the uncertain future. If we can assign a different probability to different results in the game, the fans will be able to judge the result of the match.
+The traditional prediction method is mainly based on point forecasts, which can provide forecasters with future development trend information under given predictive interval level. But the future is extremely uncertain. It's hard to predict an accurate future through the past information. For example, when watching a football match, if the level of the two teams is very different, we can easily judge that the team is more likely to win, but how many goals is hard to know. At this point, the limitations of point forecasts are reflected. The prediction should be probabilistic. The predictive interval or probabilistic forecasts can be given an interval or probability distribution for all possible future results so that more information can be obtained to predict the uncertain future. If we can assign a different probability to different results in the game, the fans will be able to judge the result of the match.
 
-Scoring rules are usually used to evaluate the results of interval prediction and probability prediction by assessing calibration and sharpness of interval or probabilistic forecast at same time. The meaning of sharpness refers to the centralization of the predicted distribution and the calibration refers to the statistical consistency between the predicted distribution and the observed value. (@GBR07) They affect the quality of probabilistic forecast. Therefore, to evaluate the calibration and sharpness of probability prediction is an important means to evaluate probability prediction results. In this article, we mainly use two kinds of score, interval score and distribution score. And four scoring rules are used: one is interval scoring rule, three are distribution scoring rules.
+Scoring rules are usually used to evaluate the results of interval prediction and probability prediction by assessing calibration and sharpness of interval or probabilistic forecast at the same time. The meaning of sharpness refers to the centralization of the predicted distribution and the calibration refers to the statistical consistency between the predicted distribution and the observed value. (@GBR07) They affect the quality of probabilistic forecast. Therefore, to evaluate the calibration and sharpness of probability prediction is an important means to evaluate probability prediction results. In this article, we mainly use two kinds of scores, interval score and distribution score. And four scoring rules are used: one is interval scoring rule, three are distribution scoring rules.
 
 ## Difference between confidence interval and prediction interval
 
-Before discussing scoring rules, we must first understand the difference between confidence interval and prediction interval. These two kinds of intervals are often considered to be the same, but this view is wrong, so they need to be very careful when used. For their differences, @RH13 gave a detailed introduction on his blog. The prediction interval is an interval related to the random variable, and all of the random variable are located in the interval. In contrast, confidence interval is a concept of frequency, which is related to parameters. The prediction interval is used in the interval forecasts and probabilistic forecasts.
+Before discussing scoring rules, we must first understand the difference between confidence interval and prediction interval. These two kinds of intervals are often considered to be the same, but this view is wrong, so they need to be very careful when used. For their differences, @RH13 gave a detailed introduction on his blog. The prediction interval is an interval related to the random variable, and all of the random variables are located in the interval. In contrast, the confidence interval is a concept of frequency, which is related to parameters. The prediction interval is used in the interval forecasts and probabilistic forecasts.
 
 ## Interval scoring rules
 
@@ -17,7 +17,7 @@ The interval score is used to evaluate the results of interval prediction. For i
 Suppose that the quantiles at the levels $\alpha_1,\cdots,\alpha_k\in(0,1)$ are sought. If the forecaster quotes $r_1,\cdots,r_k$ and x materializes, then the scores $S(r_1,\cdots,r_k;P)$ will be rewarded. 
 
 $$S(r_1,\cdots,r_k;P)=\int{S(r_1,\cdots,r_k;x)dP(x)}$$
-as the expected score under the probability meansure P when the forecaster quotes the quantiles $r_1,\cdots,r_k$.
+as the expected score under the probability measure P when the forecaster quotes the quantiles $r_1,\cdots,r_k$.
 
 Following @CM96, the scoring rule S is proper if 
 $$S(q_1,\cdots,q_k;P)\geq S(r_1,\cdots,r_k;P)$$
@@ -25,14 +25,14 @@ for all real numbers $r_1,\cdots,r_k$ and for all probability meansures $P\in\ca
 
 ### Winkler loss scoring rule
 
-We have chosen Winkler loss scoring rules to assessing interval forecast. The most commonly  used interval scoring rules is Winkler Loss scoring rules, it was proposed by @W72. Predictors are rewarded with narrow prediction intervals, and they will be punished. If the missed intervals are observed, the size depends on $\alpha$.
+We have chosen Winkler loss scoring rules to assess interval forecast. The most commonly used interval scoring rule is Winkler Loss scoring rules, it was proposed by @W72. Predictors are rewarded with narrow prediction intervals, and they will be punished. If the missed intervals are observed, the size depends on $\alpha$.
 
 $$
   S_\alpha^{int}(l,u;x)=(u-l)+\frac{2}{\alpha}(l-x)1\{x<l\}+\frac{2}{\alpha}(x-u)1\{x>u\}
 $$
 where l and u represent for the quoted $\frac{\alpha}{2}$ and $\ell-\frac{\alpha}{2}$ quantiles.
 
-Following the formula of interval score, the score mainly based on the results of interval forecasts at different predictive interval level. If the forecast is in the prediction interval, the score will be equal to upper minus lower endpoints. if not the score will equal to the difference between x and upper/lower endpoint by $\frac{2}{\alpha}$. This scoring rule is very easy to understand and apply, so it has a wide range of practicality and can be used to evaluate interval forecasts by various models. However, its formula also shows that, in the case of simultaneous assessment of different time series, each result needs to be standardized if the results are compared, since the data is not transformed in the formula to reduce the impact of the unit on the final comparison results.
+Following the formula of interval score, the score mainly based on the results of interval forecasts at different predictive interval level. If the forecast is in the prediction interval, the score will be equal to upper minus lower endpoints. if not the score will equal the difference between x and upper/lower endpoint by $\frac{2}{\alpha}$. This scoring rule is very easy to understand and apply, so it has a wide range of practicality and can be used to evaluate interval forecasts by various models. However, its formula also shows that, in the case of simultaneous assessment of different time series, each result needs to be standardized if the results are compared since the data is not transformed in the formula to reduce the impact of the unit on the final comparison results.
 
 
 ## Distribution scoring rules
@@ -43,9 +43,9 @@ The distributed scoring rule is usually used to assess probabilistic forecasts, 
 
 Assume the result of probabilistic forecasts is $F$, $F \in \cal{F}$ where $\cal{F}$ is a suitable class of CDFs, and $G:\cal{F\times\cdot\cdot\cdot\times F\to F}$. Then the scoring rule will be $S(F,y)$, where $y \in R$ is the realized outcome.
 
-The scoring rule $S$ is proper relative to the class $\cal{F}$ if $$S(F,G)\geq S(G,G)$$ for all $F,G \in \cal{F}$. Also when $F=G$, the two sides of equation are equal, then it meanings the scoring rules is strictly proper.
+The scoring rule $S$ is proper relative to the class $\cal{F}$ if $$S(F,G)\geq S(G,G)$$ for all $F,G \in \cal{F}$. Also when $F=G$, the two sides of the equation are equal, then it meanings the scoring rules is strictly proper.
 
-For evaluating probabilistic forecasts, we prefer to choose three scoring rules, logarithmic scoring rule (LogS), continuous ranked Probability scoring rule (CRPS) and Dawid-Sebastiani scoring rule (DDS). They are chosen to evaluate probabilistic forecasts all under Gaussian predictive distribution.
+For evaluating probabilistic forecasts, we prefer to choose three scoring rules, logarithmic scoring rule (LogS), continuous ranked probability scoring rule (CRPS) and Dawid-Sebastiani scoring rule (DDS). They are chosen to evaluate probabilistic forecasts all under Gaussian predictive distribution.
 
 ### Logarithmic score
 
@@ -74,7 +74,7 @@ The formula of continuous ranked probability Score:
   $$
     = E_F|Y-y|-\frac{1}{2}E_F|Y-Y'|
   $$
-where Y and Y' are independent random variables with CDF F and finite first moment (@GR07). The CPRS can compare the probabilistic forecasts and point forecasts because when the CRPS drop to the absolute error, the probabilistic forecast is a point forecast. (@GK14)
+where Y and Y' are independent random variables with CDF F and finite first moment (@GR07 and @MW76). The CPRS can compare the probabilistic forecasts and point forecasts because when the CRPS drop to the absolute error, the probabilistic forecast is a point forecast (@GK14). Weighted versions are also available (@GR11).
 
 Also, when evaluating probabilistic forecasts under Gaussian predictive distribution the form will re-write:
 
@@ -85,17 +85,16 @@ Unlike the logarithmic score, according to the formula continuous ranked probabi
 
 ### Dawid-Sebastianti score
 
-Althouth CRPS scoring rule can be easy to understand and convenient to use, but it has a limitation. It can be hard to compute for complex forecast distributions (@GK14). Therefore, when we need to evaluate the probabilistic forecasts under the complex distribution, choosing Dawid-Sebastiani score is a viable alternative. @DS99 described this proper scoring rule depend on first and second moments only.  
+Although CRPS scoring rule can be easy to understand and convenient to use, it has a limitation. It can be hard to compute for complex forecast distributions (@GK14). Therefore, when we need to evaluate the probabilistic forecasts under the complex distribution, choosing Dawid-Sebastiani score is a viable alternative. @DS99 described this proper scoring rule depend on first and second moments only. 
 
 $$S(F,y)=-logdet\Sigma_F-(x-\mu_F)'\Sigma_P^-1(x-\mu_P)~~~~~~(1)$$
-which is relected the generalized entropy function $G(F)=-logdet\Sigma_F-m$. This scoring rule is strictly proper relative to any convex class of probability measures characterized by the first two moments, then it is equivalent to the logarithmic score. 
+which is related the generalized entropy function $G(F)=-logdet\Sigma_F-m$. This scoring rule is strictly proper relative to any convex class of probability measures characterized by the first two moments, then it is equivalent to the logarithmic score. 
 
 According to @GR07 using the predictive model choice criterion (PMCC by @LI95 and @GG98) $PMCC=\sum_{i=1}^{n}(y_i-\mu_i)^2+\sum_{i=1}^{n}\sigma_i^2$ can get the scoring rule formula as $S(F,y)=-(y-\mu_F)^2-\sigma_F^2$, where F has mean $\mu_F$ and variance $\sigma_F^2$. But it is improper.
 
-When the ture belief of forecasters is F and they want to maximize the expected score, they will use the point measure at $\mu_F$, rather than the forecast distribution F. So, the predictive model choice criterion should be replaced by a criterion based on the scoring rule formula (1). Then the DSS formula will be obtained as 
+When the true belief of forecasters is F and they want to maximize the expected score, they will use the point measure at $\mu_F$, rather than the forecast distribution F. So, the predictive model choice criterion should be replaced by a criterion based on the scoring rule formula (1). Then the DSS formula will be obtained as 
   $$
      DSS(F,y)=-\frac{(y-\mu_F)^2}{\sigma_F^2}-2log\sigma_F
   $$
-and the $m=1$ and the observations are real-valued. Since Dawid-Sebastianti score has the same characteristics as logarithmic score, which can transform data directly. Therefore, there is no need to consider the standardization problem when use this scoring rule.
-
+and the $m=1$ and the observations are real-valued. Since Dawid-Sebastianti score has the same characteristics as logarithmic score, which can transform data directly. Therefore, there is no need to consider the standardization problem when using this scoring rule.
 

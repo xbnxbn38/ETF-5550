@@ -4,7 +4,7 @@ The ASX 200 is an index on the Australian Securities Exchange officially release
 
 The data from ASX 200 is a kind of financial time series, it has the following characteristics. Firstly, The unconditional distribution is leptokurtic, it means that comparing with Gaussian distribution it has a high peak and heavy tails. Also, the return series appears to have a constant unconditional mean, so the time series of return might be stationary, some trend models are not suitable to use for financial times series as ETS model. Because of the volatility of return changes over time and volatility tends to arrive in clusters, the GARCH model is very suitable for use. We choose to use ARIMA model and ARIMA-GARCH model to fit model. Also, using these two models can be very intuitively and clearly to compare the results of forecasting and scoring. 
 
-The raw data comes from @YH, it is the daily data over 10 years period until the beginning of 2018. Because of the features of financial time series, we processed data and obtain its simple return. 
+The raw data comes from @YH, it is the daily data over 12 years period until the beginning of 2018. Because of the features of financial time series, we processed data and obtain its simple return. 
 
 ```{r asxdata, include=FALSE}
 raw.asx <- read_csv("data/s&p asx 200.csv")
@@ -15,12 +15,14 @@ dftest <- window(dfasx, start = 2801)
 ```
 
 ```{r asxplot, message=FALSE}
-autoplot(asx) +
+asx %>% as.numeric() %>% ts(start = 2006.6,frequency=260) %>%
+autoplot() +
   ggtitle("ASX 200 daily price") +
   ylab("Price") +
   xlab("Year") ->AP
 
-autoplot(dfasx) +
+dfasx %>% as.numeric() %>% ts(start = 2006.6,frequency=260) %>%
+autoplot() +
   ggtitle("ASX 200 daily simple return") +
   ylab("Return") +
   xlab("Year")->AR
@@ -28,24 +30,27 @@ autoplot(dfasx) +
 grid.arrange(AP,AR)
 ```
 
-In order to facilitate the final assessment, we have set the data before 2017 as train data,the data from 2017 until early 2018 as test data. Then using train data to select suitable ARIMA model and GARCH model to make both interval forecasts and probabilistic forecasts. For the forecasting results, different scoring rules are used to evaluate them respectively. Finally compare the results of the score to evaluate the quality of the forecast results. Because in this case study, only single one time series is used, there is no the impact of the unit in the comparison. Therefore, we do not have to consider any standardization problem.
+In order to facilitate the final assessment, we have set the data before 2017 as train data, the data from 2017 until early 2018 as test data. Then using train data to select suitable ARIMA model and GARCH model to make both interval forecasts and probabilistic forecasts. For the forecasting results, different scoring rules are used to evaluate them respectively. Finally, compare the results of the score to evaluate the quality of the forecast results. Because in this case study, only single one time series is used, there is no the impact of the unit in the comparison. Therefore, we do not have to consider any standardization problem.
+
 
 ## Select suitable models
 
 ### ARIMA model
 
-For the selection of models, we first use the ‘auto.arima’ function to find the most suitable model. Based on train set, the ARIMA model is selected to be shown below.
+For the selection of models, we first use the ‘auto.arima’ function to find the most suitable model. Based on the train set, the ARIMA model is selected to be shown below.
+
 
 ```{r arima, message=FALSE}
 dffit.arima <- auto.arima(dftrain,stepwise = F)
 knitr::kable(dffit.arima$coef, caption = "ARIMA model select", booktabs = TRUE)
 ```
+
 According to table 4.1, it shows that ARIMA model does not have the autoregressive part, and the order of the moving average part is equal to 3. So, MA(3) model is the model what we need to use. This result is used to continue selecting the GARCH model.
  
 
 ### GARCH model
 
-Unlike the selection of ARIMA models, there is no automatic program to help us select the most suitable GARCH model. Therefore, we define 6 different GARCH models based on the ARIMA model,which be seclected before, and then use 'garchFit' function from fGarch package to estimate them separately. According to the result, the model with minimum AIC is chosen as the optimal model.
+Unlike the selection of ARIMA models, there is no automatic program to help us select the most suitable GARCH model. Therefore, we define 6 different GARCH models based on the ARIMA model, which be selected before and then use 'garchFit' function from fGarch package to estimate them separately. According to the result, the model with minimum AIC is chosen as the optimal model.
 
 ```{r garchselect, include=FALSE, dependson="arima"}
 garch11_results <- garchFit(~ arma(0, 3) + garch(1, 1), data = dftrain, trace = FALSE)
@@ -69,13 +74,13 @@ garch <- rbind(garch11, garch12, garch21, garch22, arch1, arch2)
 knitr::kable(round(garch, 3), caption = "Garch model select", booktabs = TRUE) 
 ```
 
-According to the result as table 4.2, the AIC of the MA(3)-GARCH(1,1) is 10.608, it is the smaller than other models. Therefore, The MA(3)-Garch(1,1) is considered the most suitable model for the train set. 
+According to the result as table 4.2, the AIC of the MA(3)-GARCH(1,1) is 10.608, it is the smaller than other models. Therefore, The MA(3)-GARCH(1,1) is considered the most suitable model for the train set. 
 
 ## Interval forecast for the ASX 200 index
 
-For interval prediction, Winkler loss scoring rule are used. According to its formula, the score is affected by the size of the predictive interval. Therefore, we want to know what changes will be made in the interval score under different predictive interval levels. First we use the previous MA(3) model to make forecast. By setting 21 different prediction intervals $(1-\alpha)\times100\%$ from 1% to 99%, the results of interval forecasts at different prediction interval level are obtained. 
+For interval prediction, Winkler loss scoring rule is used. According to its formula, the score is affected by the size of the predictive interval. Therefore, we want to know what changes will be made in the interval score under different predictive interval levels. First, we use the previous MA(3) model to make the forecast. By setting 21 different prediction intervals $(1-\alpha)\times100\%$ from 1% to 99%, the results of interval forecasts at different prediction interval level are obtained. 
 
-Because the scoring rule is to score every prediction result, to take the average of scoring results can be easy to observe the changes as the size of predictive interval increasing. Then the 21 scores under 21 predictive interval levels are obtained. Using them to make a curve as blow.
+Because the scoring rule is to score every prediction result, to take the average of scoring results can be easy to observe the changes as the size of predictive interval increasing. Then the 21 scores under 21 predictive interval levels are obtained. Using them to make a curve as the blow.
 
 ```{r infasx, include=FALSE}
 ## arima 
@@ -107,7 +112,7 @@ data.frame(level=dffc.arima$level, PIS=ASX_PIS.arima[,1]) %>%
 
 This graph shows that as the predictive interval increases, the interval score shows a trend of accelerating and increasing, and the score reaches the highest at 99%. The lower the score represents the better result of the interval forecasts, so the information from this curve shows that the interval forecasts for the simple return of the ASX200 by using ARIMA model are better when the prediction interval level is smaller. 
 
-Then use the same way to set prediction interval levals, and use MA(3)-GARCH(1,1) model to forecast the intervals again. The scores of forecast results under same predictive interval are also taken average respectively. After that, a score change curve for GARCH model is obtained, which shows the result very similar to that obtained by using the ARIMA model before. 
+Then use the same way to set prediction interval levels, and use MA(3)-GARCH(1,1) model to forecast the intervals again. The scores of forecast results under same predictive interval are also taken average respectively. After that, a score change curve for GARCH model is obtained, which shows the result very similar to that obtained by using the ARIMA model before. 
 
 ```{r garchPIS, include=FALSE}
 ## garch
@@ -194,7 +199,7 @@ rownames(ASX) <- c("GARCH","ARIMA")
   knitr::kable(ASX, caption = "Scoring Rules for MA model and GARCH model", booktabs = TRUE)
 ```
 
-For the scores by using the same model and the same score rule, we also get their mean. Then the table 4.3 is generated.
-According to this table, the scores of three type scoring rules of MA(3)-garch(1,1) model are all smaller than the result of MA(3) Model. This result shows that for the selected financial time series (ASX 200), the GARCH model can get better prediction results than the ARIMA model.
+For the scores by using the same model and the same score rule, we also get their mean. Then table 4.3 is generated.
+According to this table, the scores of three type scoring rules of MA(3)-GARCH(1,1) model are all smaller than the result of MA(3) Model. This result shows that for the selected financial time series (ASX 200), the GARCH model can get better prediction results than the ARIMA model.
 
 By observing all the previous results, no matter for interval prediction or probability prediction, the Garch model all can have a better performance than the ARIMA model, although it prediction effect under the high predictive interval level is much worse than that in the low predictive interval. This result also shows that compared with the ARIMA model, the GARCH model can analyze and predict the financial data more accurately.

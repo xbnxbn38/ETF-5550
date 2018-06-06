@@ -3,11 +3,8 @@ title: 'What makes a good prediction interval or probabilistic forecast?'
 degreetype: 'Masters of Applied Econometrics'
 author: 
 - 'Beinan Xu'
-
 studentid: 26401746
-
 supervisor: 'Professor Rob Hyndman'
-
 output: bookdown::pdf_book
 header-includes:
         - \usepackage{setspace}\doublespacing
@@ -74,6 +71,7 @@ PIS<-function(y,l,u,a)
 
 # Abstract {-}
 
-Statistical forecasting models usually provide an estimate of the forecast distribution, or at least a prediction interval, for each forecast horizon. This thesis introduces scoring rules and using them to evaluate interval forecasts and probabilistic forecasts. The measures will be evaluated empirically, by comparing the forecast distributions obtained from a range of statistical models applied to some large collections of time series. In the past few decades, the interval forecasts and probabilistic forecasts have a very important development and are attracting more and more attention. More and more organizations and individuals begin to use probability prediction instead of point prediction to carry out the future. However, the traditional evaluation methods of point prediction cannot effectively evaluate the results of probabilistic prediction. Because if we want to evaluate the probability prediction effectively, we should not only evaluate the sharpness of the prediction distribution but also evaluate its calibration. For evaluating the result of interval forecasts and probabilistic forecasts, scoring rules is a very effective method. It can evaluate the sharpness of the prediction of distribution while assessing calibration. In this article, we have used different scoring rules to evaluate the different forecasting result base on different models at the index of ASX 200 and M3 datasets.
+Forecasting is an important means of evaluating future events. It is widely present in people's lives. Statistical forecasting models usually provide an estimate of the forecast distribution, or at least a prediction interval, for each forecast horizon.  Using the right model can give forecasters more information and opportunities to judge future events. And for how to judge and select the correct prediction model, the scoring rule is an effective assessment method. This thesis mainly introduces scoring rules and how to use them to evaluate interval forecasts and probabilistic forecasts. The measures will be evaluated empirically, by comparing the forecast distributions obtained from a range of statistical models applied to some large collections of time series. 
+
 
 
